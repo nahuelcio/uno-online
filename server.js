@@ -1,14 +1,17 @@
-// Authoritative UNO server: rooms of 2-8 players over WebSockets.
+// Authoritative UNO server: rooms of 2-10 players over WebSockets.
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { WebSocketServer } = require("ws");
 
 const PORT = process.env.PORT || 4321;   // 3000 collides with too much other tooling
-const MAX_PLAYERS = 8;
-const NUDGE_COOLDOWN_MS = 4000;
+const MAX_PLAYERS = 10;
+const NUDGE_COOLDOWN_MS = 700;
 const EMOTE_COOLDOWN_MS = 1200;
 const BOT_DELAY_MS = 900;
+const UNO_GRACE_MS = 3500;               // window to click UNO after dumping your second-to-last card
+const CHAT_COOLDOWN_MS = 500;
+const CHAT_MAX_LEN = 140;
 const TEST_ROOM = "TEST";                // bots exist only at this table, so real games stay human-only
 const EMOTES = ["\u{1F602}", "\u{1F621}", "\u{1F62D}", "\u{1F60E}", "\u{1F44F}", "\u{1F480}", "\u{1F914}", "\u{1F525}"];
 const COLORS = ["R", "G", "B", "Y"];
@@ -72,6 +75,9 @@ class Room {
     this.step = 1;
     this.pendingKind = null;
     this.pendingCards = 0;
+    clearTimeout(this.unoTimer);
+    this.unoTimer = null;
+    this.unoWindow = null;
     this.started = true;
     this.winner = null;
     this.log = [];
@@ -147,7 +153,7 @@ class Room {
     this.lastPlay = { card, by: p.id, at: Date.now() };
 
     if (!p.hand.length) { this.winner = p.name; this.say(`${p.name} WINS`); return this.broadcast(); }
-    if (p.hand.length === 1 && !p.calledUno) { this.say(`${p.name} forgot to call UNO → +2`); this.draw(p, 2); }
+    if (p.hand.length === 1 && !p.calledUno) this.openUnoWindow(p);
 
     if (card.v === "+2" || card.v === "+4") {
       this.pendingKind = card.v;
@@ -177,8 +183,33 @@ class Room {
     this.broadcast();
   }
 
+  /** You are down to one card: call it before the window closes or eat +2. */
+  openUnoWindow(p) {
+    clearTimeout(this.unoTimer);
+    this.unoWindow = { id: p.id, until: Date.now() + UNO_GRACE_MS };
+    this.say(`${p.name} is on UNO — call it!`);
+    this.unoTimer = setTimeout(() => this.closeUnoWindow(p), UNO_GRACE_MS);
+    this.unoTimer.unref?.();
+  }
+
+  closeUnoWindow(p) {
+    this.unoTimer = null;
+    this.unoWindow = null;
+    if (!this.players.includes(p) || p.calledUno || p.hand.length !== 1) return this.broadcast();
+    this.say(`${p.name} forgot to call UNO → +2`);
+    this.draw(p, 2);
+    this.broadcast();
+  }
+
+  /** Callable while holding two cards, or during the grace window after playing the second-to-last. */
   callUno(p) {
-    if (p.hand.length === 2 && this.players[this.turn] === p) { p.calledUno = true; this.say(`${p.name}: UNO!`); this.broadcast(); }
+    const armed = (p.hand.length === 2 && this.players[this.turn] === p)
+      || (p.hand.length === 1 && this.unoWindow?.id === p.id);
+    if (!armed) return;
+    p.calledUno = true;
+    if (this.unoWindow?.id === p.id) { clearTimeout(this.unoTimer); this.unoTimer = null; this.unoWindow = null; }
+    this.say(`${p.name}: UNO!`);
+    this.broadcast();
   }
 
   /** MSN-style nudge: shakes the target's screen. Rate limited so it stays a joke, not a weapon. */
@@ -233,6 +264,17 @@ class Room {
     this.botTimer.unref?.();                           // never hold the process open for a bot
   }
 
+  /** Free text, so it is length-capped, rate limited, and only ever rendered as text on the client. */
+  chat(from, text) {
+    const clean = text.replace(/\s+/g, " ").trim().slice(0, CHAT_MAX_LEN);
+    if (!clean) return;
+    const now = Date.now();
+    if (now - (from.lastChat || 0) < CHAT_COOLDOWN_MS) return;
+    from.lastChat = now;
+    const packet = JSON.stringify({ type: "chat", from: from.name, text: clean });
+    for (const q of this.players) if (q.ws.readyState === 1) q.ws.send(packet);
+  }
+
   remove(ws) {
     const i = this.players.findIndex((p) => p.ws === ws);
     if (i < 0) return;
@@ -260,6 +302,7 @@ class Room {
       top: this.started ? this.pile[this.pile.length - 1] : null,
       pendingKind: this.pendingKind || null,
       pendingCards: this.pendingCards || 0,
+      unoWindow: this.unoWindow && this.unoWindow.until > Date.now() ? this.unoWindow : null,
       turn: this.turn,
       direction: this.step,
       lastPlay: this.lastPlay || null,
@@ -307,6 +350,7 @@ wss.on("connection", (ws) => {
     else if (msg.type === "uno") room.callUno(me);
     else if (msg.type === "nudge") room.nudge(me, String(msg.to || ""));
     else if (msg.type === "emote") room.emote(me, String(msg.emote || ""));
+    else if (msg.type === "chat") room.chat(me, String(msg.text || ""));
   });
   ws.on("close", () => room && room.remove(ws));
 });

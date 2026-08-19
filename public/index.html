@@ -49,6 +49,11 @@ button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
   width:min(92%,720px); aspect-ratio:1.9; max-height:100%}
 .seats .seat{position:absolute; left:calc(50% + var(--x)*1%); top:calc(50% + var(--y)*1%);
   translate:-50% -50%; pointer-events:auto}
+/* ponytail: before the game starts there is no turn order, so seats list plainly instead of orbiting */
+.seats.lobby{position:static; translate:none; width:auto; max-height:none; aspect-ratio:auto;
+  display:flex; flex-wrap:wrap; gap:.6rem; justify-content:center}
+.seats.lobby .seat{position:relative; left:auto; top:auto; translate:none}
+.seats.lobby .order{display:none}
 .seats .seat.active{translate:-50% -50%; transform:scale(1.1)}
 .seat .order{position:absolute; bottom:-9px; left:-9px; width:20px; height:20px; border-radius:50%;
   background:#16203b; border:1px solid var(--line); color:var(--muted);
@@ -69,6 +74,8 @@ button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
 @keyframes turnpulse{50%{box-shadow:0 0 0 5px #f2c31a33, 0 0 34px #f2c31a66}
   0%,100%{box-shadow:0 0 0 2px #f2c31a88, 0 0 18px #f2c31a55}}
 .seat.me b{color:var(--yellow)}
+.seat .toll{position:absolute; top:-9px; left:-9px; background:var(--red); color:#fff;
+  font-family:Bungee,sans-serif; font-size:.65rem; padding:.15rem .4rem; border-radius:6px; animation:pulse 1s infinite}
 .seat .uno{position:absolute; top:-9px; right:-9px; background:var(--red); color:#fff;
   font-family:Bungee,sans-serif; font-size:.6rem; padding:.15rem .4rem; border-radius:6px; animation:pulse 1s infinite}
 
@@ -137,15 +144,33 @@ button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
 #unoBtn{background:linear-gradient(180deg,#ff6b62,#d8342f); color:#fff; box-shadow:0 6px 0 #8e1f1c}
 #unoBtn.called{background:linear-gradient(180deg,#5fd07a,#2e9e4f); box-shadow:0 6px 0 #1d6b35; opacity:1}
 #unoBtn.called::after{content:" \2713"}
-#log{position:fixed; top:50%; right:clamp(.6rem,2vw,1.4rem); transform:translateY(-50%);
-  width:min(230px,22vw); max-height:52vh; overflow:auto; padding:.7rem .85rem;
+#log{max-height:34vh; overflow:auto; padding:.7rem .85rem;
   background:#0b1220cc; border:1px solid var(--line); border-radius:14px; backdrop-filter:blur(6px);
   font-size:.8rem; color:var(--muted); text-align:left; line-height:1.65; white-space:pre-line;
   scrollbar-width:thin; z-index:5}
 #log::before{content:"LOG"; display:block; font:800 .65rem Outfit,sans-serif; letter-spacing:.16em;
   color:var(--yellow); margin-bottom:.35rem}
+#side{position:fixed; top:50%; right:clamp(.6rem,2vw,1.4rem); transform:translateY(-50%);
+  width:min(250px,24vw); display:flex; flex-direction:column; gap:.5rem; z-index:5}
+#chat{display:flex; flex-direction:column; gap:.4rem; padding:.7rem .85rem; border-radius:14px;
+  background:#0b1220cc; border:1px solid var(--line); backdrop-filter:blur(6px)}
+#chatlog{max-height:26vh; overflow:auto; font-size:.8rem; line-height:1.5; scrollbar-width:thin;
+  display:flex; flex-direction:column; gap:.2rem}
+#chatlog b{color:var(--yellow); font-weight:700}
+#chatlog .mine b{color:var(--green)}
+#chatform{display:flex; gap:.35rem}
+#chatform input{margin:0; padding:.4rem .55rem; font-size:.8rem; border-radius:9px}
+#chatform button{padding:.4rem .6rem; font-size:.8rem; border-radius:9px; box-shadow:0 3px 0 #b8860b}
+.seat .stackhit{position:absolute; top:-11px; left:-11px; background:var(--red); color:#fff;
+  font:800 .72rem Outfit,sans-serif; padding:.15rem .45rem; border-radius:999px;
+  box-shadow:0 0 0 2px #0b1220; animation:pulse .8s infinite}
+#stackChip{background:var(--red); color:#fff; border-color:transparent; font-weight:800}
+#unoBtn.armed{animation:pulse .55s infinite}
+
 @media (max-width:1000px){                             /* no room for a side rail: back into the flow */
-  #log{position:static; transform:none; width:auto; max-height:88px; text-align:center; backdrop-filter:none}
+  #side{position:static; transform:none; width:auto}
+  #log{max-height:88px; text-align:center}
+  #chatlog{max-height:110px}
 }
 
 /* color picker + winner */
@@ -212,7 +237,7 @@ body.nudged{animation:nudge .55s ease}
 
 <div id="lobby">
   <h1>UNO<span style="color:var(--yellow)">·</span>ONLINE</h1>
-  <p style="color:var(--muted);margin:.4rem 0 1.4rem">2–8 players. Share the room code.</p>
+  <p style="color:var(--muted);margin:.4rem 0 1.4rem">2–10 players. Share the room code.</p>
   <div class="panel">
     <label for="name">Your name</label>
     <input id="name" maxlength="16" placeholder="Nahuel" autocomplete="off" spellcheck="false" autofocus>
@@ -236,7 +261,7 @@ body.nudged{animation:nudge .55s ease}
   </div>
 
   <div class="center">
-    <div class="felt"></div>
+    <div class="felt" id="felt"></div>
     <div class="seats" id="seats"></div>
     <div class="stackzone">
       <small>Deck</small>
@@ -257,7 +282,16 @@ body.nudged{animation:nudge .55s ease}
   <div class="emotebar" id="emotebar"></div>
 
   <div class="handwrap"><div id="hand"></div></div>
-  <div id="log"></div>
+  <div id="side">
+    <div id="log"></div>
+    <div id="chat">
+      <div id="chatlog"></div>
+      <form id="chatform" autocomplete="off">
+        <input id="chatinput" maxlength="140" placeholder="Say something…" aria-label="Chat message">
+        <button type="submit">Send</button>
+      </form>
+    </div>
+  </div>
 </div>
 
 <div class="overlay" id="picker">
@@ -286,6 +320,7 @@ const FACE = { wild:"W", "+4":"+4", skip:"⦸", rev:"⇄", "+2":"+2" };
 const face = (c) => FACE[c.v] || c.v;
 
 let ws, state = null, pendingIndex = null, lastTopKey = "";
+let myName = "";
 let lastHandSize = -1;                                 // -1 = first render: deal, do not fly from the deck
 
 function cardEl(card, extra = "") {
@@ -299,6 +334,7 @@ function connect() {
   const name = $("name").value.trim() || "player";
   const code = ($("room").value.trim() || "MAIN").toUpperCase();
   localStorage.setItem("uno.name", name);
+  myName = name;
   ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`);
   ws.onopen = () => ws.send(JSON.stringify({ type: "join", name, code }));
   ws.onmessage = (e) => {
@@ -306,6 +342,7 @@ function connect() {
     if (msg.type === "error") { $("err").textContent = msg.message; ws.close(); return; }
     if (msg.type === "nudge") return nudged(msg.from);
     if (msg.type === "emote") return showEmote(msg.from, msg.emote);
+    if (msg.type === "chat") return addChat(msg.from, msg.text);
     if (msg.type === "state") { state = msg; $("lobby").style.display = "none"; $("game").style.display = "flex"; render(); }
   };
   ws.onclose = () => { $("turnChip").textContent = "disconnected"; };
@@ -337,6 +374,26 @@ function showEmote(playerId, emote) {
   document.body.append(b);
 }
 
+function addChat(from, text) {
+  const box = $("chatlog");
+  const line = document.createElement("div");
+  if (from === myName) line.className = "mine";
+  const who = document.createElement("b");
+  who.textContent = `${from}: `;
+  line.append(who, document.createTextNode(text));     // text node, never innerHTML
+  box.append(line);
+  while (box.children.length > 50) box.firstChild.remove();
+  box.scrollTop = box.scrollHeight;
+}
+
+$("chatform").onsubmit = (e) => {
+  e.preventDefault();
+  const text = $("chatinput").value.trim();
+  if (!text) return;
+  send({ type: "chat", text });
+  $("chatinput").value = "";
+};
+
 function nudged(from) {
   $("turnChip").textContent = `${from} nudged you!`;
   document.body.classList.remove("nudged");
@@ -357,18 +414,32 @@ function nudged(from) {
   } catch { /* audio is optional */ }
 }
 
+let notified = false;
+// ponytail: only fires on the rising edge of your turn, and only when the tab is hidden
+function notifyTurn(yourTurn) {
+  if (!yourTurn) { notified = false; return; }
+  if (notified || document.visibilityState === "visible") return;
+  notified = true;
+  if (window.Notification?.permission === "granted")
+    new Notification("UNO", { body: "It's your turn!", tag: "uno-turn" });
+}
+
 function render() {
   const s = state;
   $("codeChip").textContent = s.code;
   $("dirChip").textContent = s.direction > 0 ? "↻ clockwise" : "↺ counter-clockwise";
   $("stackChip").style.display = s.pendingKind ? "" : "none";
-  $("stackChip").textContent = `⚡ stack +${s.pendingCards} (${s.pendingKind})`;
+  $("stackChip").textContent = s.pendingKind
+    ? `⚡ ${s.players[s.turn].name} draws ${s.pendingCards} unless they stack a ${s.pendingKind}`
+    : "";
   $("botBtn").style.display = s.started || s.code !== "TEST" ? "none" : "";
-  $("botBtn").disabled = s.players.length >= 8;
+  $("botBtn").disabled = s.players.length >= 10;
   $("startBtn").style.display = s.started ? "none" : "";
   $("startBtn").disabled = s.players.length < 2;
 
   const seats = $("seats");
+  seats.classList.toggle("lobby", !s.started);
+  $("felt").style.display = s.started ? "" : "none";
   const n = s.players.length;
   const mine = Math.max(0, s.players.findIndex((p) => p.id === s.you));
   const nextTurn = s.started && !s.winner ? (s.turn + (s.direction > 0 ? 1 : n - 1)) % n : -1;
@@ -387,6 +458,13 @@ function render() {
     order.textContent = turnsAway === 0 ? "\u25B6" : turnsAway;
     order.title = turnsAway === 0 ? "playing now" : `${turnsAway} turns away`;
     seat.append(order);
+    if (s.pendingKind && i === s.turn && !s.winner) {
+      const toll = document.createElement("span");
+      toll.className = "toll";
+      toll.textContent = `+${s.pendingCards}`;
+      toll.title = `Must stack a ${s.pendingKind} or draw ${s.pendingCards}`;
+      seat.append(toll);
+    }
     if (p.uno) {
       const uno = document.createElement("span");
       uno.className = "uno";
@@ -457,12 +535,13 @@ function render() {
   const unoBtn = $("unoBtn");
   unoBtn.classList.toggle("called", called);
   unoBtn.textContent = called ? "UNO" : "UNO!";
-  unoBtn.disabled = called || !(myTurn && s.hand.length === 2 && s.canPlay.some(Boolean));
+$("joinBtn").onclick = () => { window.Notification?.requestPermission?.(); connect(); };
   const canDraw = myTurn && !s.pendingKind && !hasLegalCard;
   $("deck").style.pointerEvents = canDraw ? "auto" : "none";
   $("deck").classList.toggle("disabled", !canDraw);
   $("deck").classList.toggle("mustdraw", canDraw);     // no legal card: the deck is the only move
   const yourTurn = s.started && !s.winner && s.players[s.turn]?.id === s.you;
+  notifyTurn(yourTurn);
   $("turnChip").classList.toggle("mine", yourTurn);
   $("turnChip").textContent = !s.started ? "waiting for players…"
     : s.winner ? "game over" : canDraw ? "\u25B6 NO PLAYS \u2014 DRAW FROM THE DECK"
