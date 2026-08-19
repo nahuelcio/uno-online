@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="es-AR">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -74,8 +74,6 @@ button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
 @keyframes turnpulse{50%{box-shadow:0 0 0 5px #f2c31a33, 0 0 34px #f2c31a66}
   0%,100%{box-shadow:0 0 0 2px #f2c31a88, 0 0 18px #f2c31a55}}
 .seat.me b{color:var(--yellow)}
-.seat .toll{position:absolute; top:-9px; left:-9px; background:var(--red); color:#fff;
-  font-family:Bungee,sans-serif; font-size:.65rem; padding:.15rem .4rem; border-radius:6px; animation:pulse 1s infinite}
 .seat .uno{position:absolute; top:-9px; right:-9px; background:var(--red); color:#fff;
   font-family:Bungee,sans-serif; font-size:.6rem; padding:.15rem .4rem; border-radius:6px; animation:pulse 1s infinite}
 
@@ -148,7 +146,7 @@ button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
   background:#0b1220cc; border:1px solid var(--line); border-radius:14px; backdrop-filter:blur(6px);
   font-size:.8rem; color:var(--muted); text-align:left; line-height:1.65; white-space:pre-line;
   scrollbar-width:thin; z-index:5}
-#log::before{content:"LOG"; display:block; font:800 .65rem Outfit,sans-serif; letter-spacing:.16em;
+#log::before{content:"REGISTRO"; display:block; font:800 .65rem Outfit,sans-serif; letter-spacing:.16em;
   color:var(--yellow); margin-bottom:.35rem}
 #side{position:fixed; top:50%; right:clamp(.6rem,2vw,1.4rem); transform:translateY(-50%);
   width:min(250px,24vw); display:flex; flex-direction:column; gap:.5rem; z-index:5}
@@ -238,13 +236,13 @@ body.nudged{animation:nudge .55s ease}
 
 <div id="lobby">
   <h1>UNO<span style="color:var(--yellow)">·</span>ONLINE</h1>
-  <p style="color:var(--muted);margin:.4rem 0 1.4rem">2–12 players. Share the room code.</p>
+  <p style="color:var(--muted);margin:.4rem 0 1.4rem">2 a 12 jugadores. Pasá el código de sala.</p>
   <div class="panel">
-    <label for="name">Your name</label>
+    <label for="name">Tu nombre</label>
     <input id="name" maxlength="16" placeholder="Nahuel" autocomplete="off" spellcheck="false" autofocus>
-    <label for="room">Room code</label>
+    <label for="room">Código de sala</label>
     <input id="room" maxlength="6" placeholder="MAIN" autocomplete="off" spellcheck="false" style="text-transform:uppercase">
-    <button id="joinBtn">Join table</button>
+    <button id="joinBtn">Entrar a la mesa</button>
     <p id="err" style="color:var(--red);min-height:1.2em;margin:.7rem 0 0;font-size:.9rem"></p>
   </div>
 </div>
@@ -252,24 +250,24 @@ body.nudged{animation:nudge .55s ease}
 <div id="game">
   <div class="topbar">
     <h1>UNO</h1>
-    <span class="chip">Room <b id="codeChip">—</b></span>
-    <span class="chip" id="dirChip">↻ clockwise</span>
+    <span class="chip">Sala <b id="codeChip">—</b></span>
+    <span class="chip" id="dirChip">↻ sentido horario</span>
     <span class="chip" id="stackChip" style="display:none"></span>
     <span style="flex:1"></span>
-    <button id="shareBtn" class="ghost">Copy invite link</button>
+    <button id="shareBtn" class="ghost">Copiar link de invitación</button>
     <button id="botBtn" class="ghost" style="display:none">+ Bot</button>
-    <button id="startBtn" class="ghost">Start game</button>
+    <button id="startBtn" class="ghost">Empezar partida</button>
   </div>
 
   <div class="center">
     <div class="felt" id="felt"></div>
     <div class="seats" id="seats"></div>
     <div class="stackzone">
-      <small>Deck</small>
+      <small>Mazo</small>
       <div class="deck" id="deck">UNO</div>
     </div>
     <div class="stackzone">
-      <small>Discard</small>
+      <small>Descarte</small>
       <div id="pile"></div>
       <div class="colorlight" id="colorlight"><span id="colorname">—</span></div>
     </div>
@@ -277,7 +275,7 @@ body.nudged{animation:nudge .55s ease}
 
   <div class="controls">
     <button id="unoBtn" disabled>UNO!</button>
-    <span class="chip turnchip" id="turnChip">waiting…</span>
+    <span class="chip turnchip" id="turnChip">esperando…</span>
   </div>
 
   <div class="emotebar" id="emotebar"></div>
@@ -288,8 +286,8 @@ body.nudged{animation:nudge .55s ease}
     <div id="chat">
       <div id="chatlog"></div>
       <form id="chatform" autocomplete="off">
-        <input id="chatinput" maxlength="140" placeholder="Say something…" aria-label="Chat message">
-        <button type="submit">Send</button>
+        <input id="chatinput" maxlength="140" placeholder="Escribí algo…" aria-label="Mensaje de chat">
+        <button type="submit">Enviar</button>
       </form>
     </div>
   </div>
@@ -297,7 +295,7 @@ body.nudged{animation:nudge .55s ease}
 
 <div class="overlay" id="picker">
   <div class="panel" style="text-align:center">
-    <h3 style="margin:0">Pick a color</h3>
+    <h3 style="margin:0">Elegí un color</h3>
     <div class="swatches">
       <div class="sw" data-c="R" style="background:var(--red)"></div>
       <div class="sw" data-c="G" style="background:var(--green)"></div>
@@ -310,7 +308,7 @@ body.nudged{animation:nudge .55s ease}
 <div class="overlay" id="winner">
   <div class="panel" style="text-align:center">
     <h2 id="winnerName">—</h2>
-    <button id="againBtn">New game</button>
+    <button id="againBtn">Otra partida</button>
   </div>
 </div>
 
@@ -332,7 +330,7 @@ function cardEl(card, extra = "") {
 }
 
 function connect() {
-  const name = $("name").value.trim() || "player";
+  const name = $("name").value.trim() || "jugador";
   const code = ($("room").value.trim() || "MAIN").toUpperCase();
   localStorage.setItem("uno.name", name);
   myName = name;
@@ -343,11 +341,11 @@ function connect() {
     if (msg.type === "error") { $("err").textContent = msg.message; ws.close(); return; }
     if (msg.type === "nudge") return nudged(msg.from);
     if (msg.type === "emote") return showEmote(msg.from, msg.emote);
-    if (msg.type === "ate") return showEmote(msg.who, `+${msg.cards}`, `ate the ${msg.kind} stack`);
+    if (msg.type === "ate") return showEmote(msg.who, `+${msg.cards}`, `se comió ${msg.cards === 1 ? "1 carta" : msg.cards + " cartas"} del ${msg.kind}`);
     if (msg.type === "chat") return addChat(msg.from, msg.text);
     if (msg.type === "state") { state = msg; $("lobby").style.display = "none"; $("game").style.display = "flex"; render(); }
   };
-  ws.onclose = () => { $("turnChip").textContent = "disconnected"; };
+  ws.onclose = () => { $("turnChip").textContent = "desconectado"; };
 }
 const send = (o) => ws && ws.readyState === 1 && ws.send(JSON.stringify(o));
 
@@ -355,7 +353,7 @@ const EMOTES = ["\u{1F602}", "\u{1F621}", "\u{1F62D}", "\u{1F60E}", "\u{1F44F}",
 $("emotebar").replaceChildren(...EMOTES.map((e) => {
   const b = document.createElement("button");
   b.textContent = e;
-  b.setAttribute("aria-label", `Send ${e}`);
+  b.setAttribute("aria-label", `Mandar ${e}`);
   b.onclick = () => send({ type: "emote", emote: e });
   return b;
 }));
@@ -397,7 +395,7 @@ $("chatform").onsubmit = (e) => {
 };
 
 function nudged(from) {
-  $("turnChip").textContent = `${from} nudged you!`;
+  $("turnChip").textContent = `¡${from} te tocó timbre!`;
   document.body.classList.remove("nudged");
   void document.body.offsetWidth;                      // restart the shake on repeat nudges
   document.body.classList.add("nudged");
@@ -423,16 +421,16 @@ function notifyTurn(yourTurn) {
   if (notified || document.visibilityState === "visible") return;
   notified = true;
   if (window.Notification?.permission === "granted")
-    new Notification("UNO", { body: "It's your turn!", tag: "uno-turn" });
+    new Notification("UNO", { body: "¡Es tu turno!", tag: "uno-turn" });
 }
 
 function render() {
   const s = state;
   $("codeChip").textContent = s.code;
-  $("dirChip").textContent = s.direction > 0 ? "↻ clockwise" : "↺ counter-clockwise";
+  $("dirChip").textContent = s.direction > 0 ? "↻ sentido horario" : "↺ sentido antihorario";
   $("stackChip").style.display = s.pendingKind ? "" : "none";
   $("stackChip").textContent = s.pendingKind
-    ? `⚡ ${s.players[s.turn].name} draws ${s.pendingCards} unless they stack a ${s.pendingKind}`
+    ? `⚡ ${s.players[s.turn].name} levanta ${s.pendingCards} si no encima un ${s.pendingKind}`
     : "";
   $("botBtn").style.display = s.started || s.code !== "TEST" ? "none" : "";
   $("botBtn").disabled = s.players.length >= 12;
@@ -459,21 +457,14 @@ function render() {
       const hit = document.createElement("span");
       hit.className = "stackhit";
       hit.textContent = `+${s.pendingCards}`;
-      hit.title = `Draws ${s.pendingCards} unless answered with a +2 or +4`;
+      hit.title = `Levanta ${s.pendingCards} si no responde con un +2 o +4`;
       seat.append(hit);
     }
     const order = document.createElement("span");
     order.className = "order";
     order.textContent = turnsAway === 0 ? "\u25B6" : turnsAway;
-    order.title = turnsAway === 0 ? "playing now" : `${turnsAway} turns away`;
+    order.title = turnsAway === 0 ? "juega ahora" : `faltan ${turnsAway} turnos`;
     seat.append(order);
-    if (s.pendingKind && i === s.turn && !s.winner) {
-      const toll = document.createElement("span");
-      toll.className = "toll";
-      toll.textContent = `+${s.pendingCards}`;
-      toll.title = `Must stack a ${s.pendingKind} or draw ${s.pendingCards}`;
-      seat.append(toll);
-    }
     if (p.uno) {
       const uno = document.createElement("span");
       uno.className = "uno";
@@ -484,15 +475,15 @@ function render() {
       const zap = document.createElement("button");
       zap.className = "zap";
       zap.textContent = "\u26a1";
-      zap.title = `Nudge ${p.name}`;
-      zap.setAttribute("aria-label", `Nudge ${p.name}`);
+      zap.title = `Tocarle timbre a ${p.name}`;
+      zap.setAttribute("aria-label", `Tocarle timbre a ${p.name}`);
       zap.onclick = () => send({ type: "nudge", to: p.id });
       seat.append(zap);
     }
     const name = document.createElement("b");
     name.textContent = p.name;
     const cards = document.createElement("small");
-    cards.textContent = s.started ? `${p.cards} cards` : "ready";
+    cards.textContent = s.started ? `${p.cards} cartas` : "listo";
     seat.append(name, cards);
     return seat;
   }));
@@ -509,7 +500,7 @@ function render() {
     }
   } else pile.innerHTML = "";
   $("colorlight").style.background = COLORVAR[s.color] || "#333";
-  $("colorname").textContent = { R:"RED", G:"GREEN", B:"BLUE", Y:"YELLOW" }[s.color] || "—";
+  $("colorname").textContent = { R:"ROJO", G:"VERDE", B:"AZUL", Y:"AMARILLO" }[s.color] || "—";
 
   const hasLegalCard = s.canPlay.some(Boolean);
   const myTurn = hasLegalCard || (s.started && !s.winner && s.players[s.turn]?.id === s.you);
@@ -555,22 +546,22 @@ function render() {
   const yourTurn = s.started && !s.winner && s.players[s.turn]?.id === s.you;
   notifyTurn(yourTurn);
   $("turnChip").classList.toggle("mine", yourTurn);
-  $("turnChip").textContent = !s.started ? "waiting for players…"
-    : s.winner ? "game over" : canDraw ? "\u25B6 NO PLAYS \u2014 DRAW FROM THE DECK"
-    : yourTurn ? "\u25B6 YOUR TURN" : `\u23F3 ${s.players[s.turn]?.name}'s turn`;
+  $("turnChip").textContent = !s.started ? "esperando jugadores…"
+    : s.winner ? "se terminó" : canDraw ? "\u25B6 NO TENÉS JUGADA \u2014 LEVANTÁ DEL MAZO"
+    : yourTurn ? "\u25B6 TU TURNO" : `\u23F3 turno de ${s.players[s.turn]?.name}`;
   $("log").textContent = s.log.slice(-8).join("\n");
 
-  if (s.winner) { $("winnerName").textContent = `${s.winner} wins! 🎉`; $("winner").classList.add("show"); }
+  if (s.winner) { $("winnerName").textContent = `¡Ganó ${s.winner}! 🎉`; $("winner").classList.add("show"); }
   else $("winner").classList.remove("show");
 }
 
 $("shareBtn").onclick = async () => {
   const link = `${location.origin}/?room=${state ? state.code : "MAIN"}`;
-  try { await navigator.clipboard.writeText(link); } catch { prompt("Copy this link:", link); }
-  $("shareBtn").textContent = "Copied!";
-  setTimeout(() => ($("shareBtn").textContent = "Copy invite link"), 1400);
+  try { await navigator.clipboard.writeText(link); } catch { prompt("Copiá este link:", link); }
+  $("shareBtn").textContent = "¡Copiado!";
+  setTimeout(() => ($("shareBtn").textContent = "Copiar link de invitación"), 1400);
 };
-$("joinBtn").onclick = connect;
+$("joinBtn").onclick = () => { window.Notification?.requestPermission?.(); connect(); };
 $("room").onkeydown = $("name").onkeydown = (e) => { if (e.key === "Enter") connect(); };
 $("botBtn").onclick = () => send({ type: "addBot" });
 $("startBtn").onclick = () => send({ type: "start" });

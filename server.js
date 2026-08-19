@@ -56,9 +56,9 @@ class Room {
   }
 
   add(ws, name) {
-    if (this.started) return { error: "game already started" };
-    if (this.players.length >= MAX_PLAYERS) return { error: "room is full" };
-    const p = { id: Math.random().toString(36).slice(2, 8), name: name.slice(0, 16) || "player", ws, hand: [], calledUno: false, connected: true };
+    if (this.started) return { error: "la partida ya empezó" };
+    if (this.players.length >= MAX_PLAYERS) return { error: "la sala está llena" };
+    const p = { id: Math.random().toString(36).slice(2, 8), name: name.slice(0, 16) || "jugador", ws, hand: [], calledUno: false, connected: true };
     this.players.push(p);
     return { player: p };
   }
@@ -81,7 +81,7 @@ class Room {
     this.started = true;
     this.winner = null;
     this.log = [];
-    this.say("Game started");
+    this.say("Arrancó la partida");
     this.settleTurn();
   }
 
@@ -115,7 +115,7 @@ class Room {
   eatStackIfNeeded() {
     const p = this.players[this.turn];
     if (this.pendingKind && !this.legalFor(p).length) {
-      this.say(`${p.name} takes ${this.pendingCards} from the ${this.pendingKind} stack`);
+      this.say(`${p.name} se come ${this.pendingCards} cartas del ${this.pendingKind}`);
       const packet = JSON.stringify({ type: "ate", who: p.id, cards: this.pendingCards, kind: this.pendingKind });
       for (const q of this.players) if (q.ws?.readyState === 1) q.ws.send(packet);
       this.draw(p, this.pendingCards);
@@ -131,7 +131,7 @@ class Room {
   endOnExhaustedDeck() {
     const best = this.players.reduce((a, b) => (b.hand.length < a.hand.length ? b : a));
     this.winner = best.name;
-    this.say(`Deck exhausted — ${best.name} WINS with the fewest cards`);
+    this.say(`Se acabó el mazo — GANA ${best.name} con menos cartas`);
   }
 
   /** Resolve everything the next player has no choice about, then hand them the turn. */
@@ -151,10 +151,10 @@ class Room {
     p.hand.splice(index, 1);
     this.pile.push(card);
     this.color = card.c === "W" ? (COLORS.includes(chosenColor) ? chosenColor : COLORS[(Math.random() * 4) | 0]) : card.c;
-    this.say(`${p.name} played ${card.c === "W" ? card.v : card.c + card.v}${card.c === "W" ? " → " + this.color : ""}`);
+    this.say(`${p.name} jugó ${card.c === "W" ? card.v : card.c + card.v}${card.c === "W" ? " → " + this.color : ""}`);
     this.lastPlay = { card, by: p.id, at: Date.now() };
 
-    if (!p.hand.length) { this.winner = p.name; this.say(`${p.name} WINS`); return this.broadcast(); }
+    if (!p.hand.length) { this.winner = p.name; this.say(`GANA ${p.name}`); return this.broadcast(); }
     if (p.hand.length === 1 && !p.calledUno) this.openUnoWindow(p);
 
     if (card.v === "+2" || card.v === "+4") {
@@ -174,12 +174,12 @@ class Room {
     if (!this.started || this.winner || this.players[this.turn] !== p || this.pendingKind) return;
     if (this.legalFor(p).length) return;
     if (!this.draw(p)) {                                 // deck spent: passing is the only move left
-      this.say(`${p.name} passes`);
+      this.say(`${p.name} pasa`);
       this.advance();
       this.settleTurn();
       return this.broadcast();
     }
-    this.say(`${p.name} drew a card`);
+    this.say(`${p.name} levantó una carta`);
     const last = p.hand[p.hand.length - 1];
     if (!playable(last, this.pile[this.pile.length - 1], this.color, null)) { this.advance(); this.settleTurn(); }
     this.broadcast();
@@ -189,7 +189,7 @@ class Room {
   openUnoWindow(p) {
     clearTimeout(this.unoTimer);
     this.unoWindow = { id: p.id, until: Date.now() + UNO_GRACE_MS };
-    this.say(`${p.name} is on UNO — call it!`);
+    this.say(`${p.name} quedó con una carta — ¡cantá UNO!`);
     this.unoTimer = setTimeout(() => this.closeUnoWindow(p), UNO_GRACE_MS);
     this.unoTimer.unref?.();
   }
@@ -198,9 +198,29 @@ class Room {
     this.unoTimer = null;
     this.unoWindow = null;
     if (!this.players.includes(p) || p.calledUno || p.hand.length !== 1) return this.broadcast();
-    this.say(`${p.name} forgot to call UNO → +2`);
+    this.say(`${p.name} se olvidó de cantar UNO → +2`);
     this.draw(p, 2);
     this.broadcast();
+  }
+
+  /** Anyone can pounce on a silent UNO before the window closes. */
+  catchUno(hunter, targetId) {
+    const target = this.players.find((q) => q.id === targetId);
+    if (!target || target === hunter) return;
+    if (this.unoWindow?.id !== target.id || target.calledUno || target.hand.length !== 1) return;
+    clearTimeout(this.unoTimer);
+    this.unoTimer = null;
+    this.unoWindow = null;
+    this.say(`${hunter.name} caught ${target.name} — no UNO called → +2`);
+    this.draw(target, 2);
+    this.announce(`${hunter.name} caught ${target.name}!`, "\u{1F6A8}");
+    this.broadcast();
+  }
+
+  /** A one-off banner every seat sees; it is not part of the game state. */
+  announce(text, icon = "") {
+    const packet = JSON.stringify({ type: "announce", text, icon });
+    for (const q of this.players) if (q.ws.readyState === 1) q.ws.send(packet);
   }
 
   /** Callable while holding two cards, or during the grace window after playing the second-to-last. */
@@ -222,7 +242,7 @@ class Room {
     if (now - (from.lastNudge || 0) < NUDGE_COOLDOWN_MS) return;
     from.lastNudge = now;
     if (to.ws.readyState === 1) to.ws.send(JSON.stringify({ type: "nudge", from: from.name }));
-    this.say(`${from.name} nudged ${to.name}`);
+    this.say(`${from.name} le tocó timbre a ${to.name}`);
     this.broadcast();
   }
 
@@ -245,7 +265,7 @@ class Room {
       id: Math.random().toString(36).slice(2, 8), name: `Bot ${n}`, bot: true,
       ws: { readyState: 3, send() {} }, hand: [], calledUno: false, connected: true,
     });
-    this.say(`Bot ${n} joined`);
+    this.say(`Entró Bot ${n}`);
   }
 
   /** Play the first legal card, or let settleTurn draw for us. */
@@ -281,10 +301,10 @@ class Room {
     const i = this.players.findIndex((p) => p.ws === ws);
     if (i < 0) return;
     const [gone] = this.players.splice(i, 1);
-    this.say(`${gone.name} left`);
+    this.say(`${gone.name} se fue`);
     if (this.started && !this.winner) {
       if (this.players.filter((p) => !p.bot).length < 1 || this.players.length < 2) {
-        this.started = false; this.winner = null; this.say("Not enough players — back to lobby");
+        this.started = false; this.winner = null; this.say("Faltan jugadores — vuelta a la sala");
       } else this.turn %= this.players.length;
     }
     if (!this.players.some((p) => !p.bot)) {           // only bots left: drop the room, not a ghost table
@@ -339,7 +359,7 @@ wss.on("connection", (ws) => {
       const { error, player } = r.add(ws, String(msg.name || ""));
       if (error) return ws.send(JSON.stringify({ type: "error", message: error }));
       room = r; me = player;
-      r.say(`${me.name} joined`);
+      r.say(`Entró ${me.name}`);
       if (r.code === TEST_ROOM && r.players.length === 1) r.addBot();   // solo test table: never wait for a human
       r.broadcast();
       return;
@@ -353,6 +373,7 @@ wss.on("connection", (ws) => {
     else if (msg.type === "nudge") room.nudge(me, String(msg.to || ""));
     else if (msg.type === "emote") room.emote(me, String(msg.emote || ""));
     else if (msg.type === "chat") room.chat(me, String(msg.text || ""));
+    else if (msg.type === "catch") room.catchUno(me, String(msg.target || ""));
   });
   ws.on("close", () => room && room.remove(ws));
 });
