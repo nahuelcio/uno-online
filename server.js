@@ -211,9 +211,9 @@ class Room {
     clearTimeout(this.unoTimer);
     this.unoTimer = null;
     this.unoWindow = null;
-    this.say(`${hunter.name} caught ${target.name} — no UNO called → +2`);
+    this.say(`${hunter.name} se la puso a ${target.name} — no cantó UNO → +2`);
     this.draw(target, 2);
-    this.announce(`${hunter.name} caught ${target.name}!`, "\u{1F6A8}");
+    this.announce(`${hunter.name.toUpperCase()} SE LA PUSO A ${target.name.toUpperCase()}`, "\u{1F6A8}");
     this.broadcast();
   }
 
@@ -295,6 +295,8 @@ class Room {
     if (!target || !this.started || !n) return true;                 // swallowed: it was a command, not chat
     const dealt = this.draw(target, n);
     this.say(`${from.name} le sumó ${dealt} carta${dealt === 1 ? "" : "s"} a ${target.name}`);
+    const packet = JSON.stringify({ type: "clown", who: target.id, cards: dealt });
+    for (const q of this.players) if (q.ws?.readyState === 1) q.ws.send(packet);
     if (target.hand.length > 1) target.calledUno = false;
     this.broadcast();
     return true;
