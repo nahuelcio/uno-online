@@ -39,6 +39,44 @@ test('allows mixed +2 and +4 stacking and applies the accumulated penalty', () =
   assert.equal(room.pendingKind, null);
 });
 
+test('stacks penalty cards without any cap across a long chain', () => {
+  const hands = [
+    [{ c: 'R', v: '+2' }, { c: 'G', v: '1' }],
+    [{ c: 'W', v: '+4' }, { c: 'G', v: '1' }],
+    [{ c: 'B', v: '+2' }, { c: 'G', v: '1' }],
+    [{ c: 'W', v: '+4' }, { c: 'G', v: '1' }],
+  ];
+  const players = hands.map((h, i) => player(`p${i}`, h));
+  const room = roomWith(players, {
+    pile: [{ c: 'R', v: '5' }],
+    deck: Array.from({ length: 40 }, () => ({ c: 'B', v: '7' })),
+  });
+
+  const runningTotal = [2, 6, 8];
+  players.forEach((p, i) => {
+    assert.equal(playable(p.hand[0], room.pile.at(-1), room.color, room.pendingKind), true,
+      `p${i} must be able to answer the stack`);
+    room.play(p, 0, 'B');
+    // The last play sends the turn back to p0, who cannot answer and eats the stack right away.
+    if (i < runningTotal.length) assert.equal(room.pendingCards, runningTotal[i], `stack total after p${i}`);
+  });
+
+  assert.equal(players[0].hand.length, 1 + 12, 'p0 eats the full uncapped 12-card stack');
+  assert.equal(room.pendingCards, 0);
+  assert.equal(room.pendingKind, null);
+});
+
+test('bots are only allowed at the TEST table', () => {
+  const test = new Room('TEST');
+  test.addBot();
+  assert.equal(test.players.length, 1);
+  assert.equal(test.players[0].bot, true);
+
+  const real = new Room('MAIN');
+  real.addBot();
+  assert.equal(real.players.length, 0, 'a real table must stay human-only');
+});
+
 test('rejects a manual draw while the active player has a legal card', () => {
   const first = player('first', [{ c: 'R', v: '1' }]);
   const second = player('second', [{ c: 'G', v: '2' }]);

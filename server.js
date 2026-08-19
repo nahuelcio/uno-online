@@ -6,6 +6,11 @@ const { WebSocketServer } = require("ws");
 
 const PORT = process.env.PORT || 4321;   // 3000 collides with too much other tooling
 const MAX_PLAYERS = 8;
+const NUDGE_COOLDOWN_MS = 4000;
+const EMOTE_COOLDOWN_MS = 1200;
+const BOT_DELAY_MS = 900;
+const TEST_ROOM = "TEST";                // bots exist only at this table, so real games stay human-only
+const EMOTES = ["\u{1F602}", "\u{1F621}", "\u{1F62D}", "\u{1F60E}", "\u{1F44F}", "\u{1F480}", "\u{1F914}", "\u{1F525}"];
 const COLORS = ["R", "G", "B", "Y"];
 const VALUES = [...Array(10).keys()].map(String).concat(["skip", "rev", "+2"]);
 
@@ -76,17 +81,21 @@ class Room {
 
   say(msg) { this.log = [...(this.log || []), msg].slice(-40); }
 
+  /** Returns how many cards were actually dealt: the deck can legitimately run dry. */
   draw(p, k = 1) {
+    let dealt = 0;
     for (let i = 0; i < k; i++) {
       if (!this.deck.length) {                       // reshuffle the discard pile, keep the top
         const top = this.pile.pop();
         this.deck = shuffle(this.pile.splice(0));
-        if (!this.deck.length) this.deck = [top];
         this.pile = [top];
+        if (!this.deck.length) break;                // nothing left to recycle: stop dealing
       }
       p.hand.push(this.deck.pop());
+      dealt++;
     }
-    p.calledUno = false;
+    if (dealt) p.calledUno = false;
+    return dealt;
   }
 
   advance() { this.turn = (this.turn + this.step + this.players.length) % this.players.length; }
@@ -108,21 +117,21 @@ class Room {
     }
   }
 
-  /** Nobody clicks the deck to be told "you cannot play": draw for them, pass if it still does not fit. */
-  autoDraw() {
-    for (let guard = 0; guard < this.players.length * 3; guard++) {
-      const p = this.players[this.turn];
-      if (!p || this.winner || this.pendingKind || this.legalFor(p).length) return;
-      this.draw(p);
-      this.say(`${p.name} drew a card`);
-      if (this.legalFor(p).length) return;              // playable — it is still their turn
-      this.say(`${p.name} passes`);
-      this.advance();
-    }
+  everyoneStuck() { return !this.deck.length && this.players.every((p) => !this.legalFor(p).length); }
+
+  /** Deck and discard are both spent and nobody can move: fewest cards wins. */
+  endOnExhaustedDeck() {
+    const best = this.players.reduce((a, b) => (b.hand.length < a.hand.length ? b : a));
+    this.winner = best.name;
+    this.say(`Deck exhausted — ${best.name} WINS with the fewest cards`);
   }
 
   /** Resolve everything the next player has no choice about, then hand them the turn. */
-  settleTurn() { this.eatStackIfNeeded(); this.autoDraw(); }
+  // ponytail: drawing is manual (drawTurn); the only forced move left is eating a stack.
+  settleTurn() {
+    this.eatStackIfNeeded();
+    if (!this.winner && this.everyoneStuck()) this.endOnExhaustedDeck();
+  }
 
   play(p, index, chosenColor) {
     if (!this.started || this.winner) return;
@@ -156,7 +165,12 @@ class Room {
   drawTurn(p) {
     if (!this.started || this.winner || this.players[this.turn] !== p || this.pendingKind) return;
     if (this.legalFor(p).length) return;
-    this.draw(p);
+    if (!this.draw(p)) {                                 // deck spent: passing is the only move left
+      this.say(`${p.name} passes`);
+      this.advance();
+      this.settleTurn();
+      return this.broadcast();
+    }
     this.say(`${p.name} drew a card`);
     const last = p.hand[p.hand.length - 1];
     if (!playable(last, this.pile[this.pile.length - 1], this.color, null)) { this.advance(); this.settleTurn(); }
@@ -167,17 +181,72 @@ class Room {
     if (p.hand.length === 2 && this.players[this.turn] === p) { p.calledUno = true; this.say(`${p.name}: UNO!`); this.broadcast(); }
   }
 
+  /** MSN-style nudge: shakes the target's screen. Rate limited so it stays a joke, not a weapon. */
+  nudge(from, targetId) {
+    const to = this.players.find((q) => q.id === targetId);
+    if (!to || to === from) return;
+    const now = Date.now();
+    if (now - (from.lastNudge || 0) < NUDGE_COOLDOWN_MS) return;
+    from.lastNudge = now;
+    if (to.ws.readyState === 1) to.ws.send(JSON.stringify({ type: "nudge", from: from.name }));
+    this.say(`${from.name} nudged ${to.name}`);
+    this.broadcast();
+  }
+
+  /** Preset emotes only: no free text means no moderation and no XSS surface. */
+  emote(from, e) {
+    if (!EMOTES.includes(e)) return;
+    const now = Date.now();
+    if (now - (from.lastEmote || 0) < EMOTE_COOLDOWN_MS) return;
+    from.lastEmote = now;
+    const packet = JSON.stringify({ type: "emote", from: from.id, emote: e });
+    for (const q of this.players) if (q.ws.readyState === 1) q.ws.send(packet);
+  }
+
+  /** Test mode: a seat with no socket that plays itself, so one person can try the game alone. */
+  addBot() {
+    if (this.code !== TEST_ROOM) return;
+    if (this.started || this.players.length >= MAX_PLAYERS) return;
+    const n = this.players.filter((p) => p.bot).length + 1;
+    this.players.push({
+      id: Math.random().toString(36).slice(2, 8), name: `Bot ${n}`, bot: true,
+      ws: { readyState: 3, send() {} }, hand: [], calledUno: false, connected: true,
+    });
+    this.say(`Bot ${n} joined`);
+  }
+
+  /** Play the first legal card, or let settleTurn draw for us. */
+  botMove() {
+    this.botTimer = null;
+    const p = this.players[this.turn];
+    if (!p || !p.bot || !this.started || this.winner) return;
+    const card = this.legalFor(p)[0];
+    if (!card) return;                                 // settleTurn already handled draws and passes
+    if (p.hand.length === 2) this.callUno(p);
+    this.play(p, p.hand.indexOf(card), COLORS[(Math.random() * 4) | 0]);
+  }
+
+  scheduleBot() {
+    if (this.botTimer || !this.started || this.winner) return;
+    if (!this.players[this.turn]?.bot) return;
+    this.botTimer = setTimeout(() => this.botMove(), BOT_DELAY_MS);
+    this.botTimer.unref?.();                           // never hold the process open for a bot
+  }
+
   remove(ws) {
     const i = this.players.findIndex((p) => p.ws === ws);
     if (i < 0) return;
     const [gone] = this.players.splice(i, 1);
     this.say(`${gone.name} left`);
     if (this.started && !this.winner) {
-      if (this.players.length < 2) { this.started = false; this.winner = null; this.say("Not enough players — back to lobby"); }
-      else this.turn %= this.players.length;
+      if (this.players.filter((p) => !p.bot).length < 1 || this.players.length < 2) {
+        this.started = false; this.winner = null; this.say("Not enough players — back to lobby");
+      } else this.turn %= this.players.length;
     }
-    if (!this.players.length) rooms.delete(this.code);
-    else this.broadcast();
+    if (!this.players.some((p) => !p.bot)) {           // only bots left: drop the room, not a ghost table
+      clearTimeout(this.botTimer);
+      rooms.delete(this.code);
+    } else this.broadcast();
   }
 
   stateFor(p) {
@@ -207,6 +276,7 @@ class Room {
     for (const p of this.players) {
       if (p.ws.readyState === 1) p.ws.send(JSON.stringify(this.stateFor(p)));
     }
+    this.scheduleBot();
   }
 }
 
@@ -225,14 +295,18 @@ wss.on("connection", (ws) => {
       if (error) return ws.send(JSON.stringify({ type: "error", message: error }));
       room = r; me = player;
       r.say(`${me.name} joined`);
+      if (r.code === TEST_ROOM && r.players.length === 1) r.addBot();   // solo test table: never wait for a human
       r.broadcast();
       return;
     }
     if (!room || !me) return;
     if (msg.type === "start") room.start(), room.broadcast();
+    else if (msg.type === "addBot") room.addBot(), room.broadcast();
     else if (msg.type === "play") room.play(me, msg.index | 0, msg.color);
     else if (msg.type === "draw") room.drawTurn(me);
     else if (msg.type === "uno") room.callUno(me);
+    else if (msg.type === "nudge") room.nudge(me, String(msg.to || ""));
+    else if (msg.type === "emote") room.emote(me, String(msg.emote || ""));
   });
   ws.on("close", () => room && room.remove(ws));
 });

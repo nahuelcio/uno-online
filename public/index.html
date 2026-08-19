@@ -44,25 +44,49 @@ button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
 .topbar{display:flex; align-items:center; gap:.8rem; flex-wrap:wrap}
 .topbar h1{font-size:1.5rem}
 .chip{background:#0b1220aa; border:1px solid var(--line); border-radius:999px; padding:.3rem .8rem; font-size:.85rem; color:var(--muted)}
-.seats{display:flex; gap:.6rem; flex-wrap:wrap; justify-content:center}
+.seats{pointer-events:none}
+.felt,.seats{position:absolute; left:50%; top:50%; translate:-50% -50%;
+  width:min(92%,720px); aspect-ratio:1.9; max-height:100%}
+.seats .seat{position:absolute; left:calc(50% + var(--x)*1%); top:calc(50% + var(--y)*1%);
+  translate:-50% -50%; pointer-events:auto}
+.seats .seat.active{translate:-50% -50%; transform:scale(1.1)}
+.seat .order{position:absolute; bottom:-9px; left:-9px; width:20px; height:20px; border-radius:50%;
+  background:#16203b; border:1px solid var(--line); color:var(--muted);
+  font-size:.62rem; font-weight:800; display:grid; place-items:center}
+.seat.next .order{background:var(--yellow); color:#111; border-color:transparent}
+.felt{border-radius:50%; background:radial-gradient(ellipse at 50% 40%,#1c6b45,#0d4429 70%,#0a3521);
+  border:10px solid #2a1a10; box-shadow:inset 0 0 60px #0009, 0 20px 50px #0006; pointer-events:none}
 .seat{position:relative; background:#0b1220bb; border:1px solid var(--line); border-radius:14px;
   padding:.5rem .8rem; min-width:104px; text-align:center; transition:.25s}
 .seat b{display:block; font-size:.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:11ch}
 .seat small{color:var(--muted)}
-.seat.active{border-color:var(--yellow); box-shadow:0 0 0 2px #f2c31a55, 0 0 26px #f2c31a44; transform:translateY(-3px)}
+.seat.active{border-color:var(--yellow); background:#f2c31a22; transform:translateY(-6px) scale(1.06);
+  animation:turnpulse 1.4s ease-in-out infinite}
+.seat.active b{color:var(--yellow)}
+.seat.active::before{content:"\25B6 TURN"; position:absolute; top:-11px; left:50%; translate:-50% 0;
+  background:var(--yellow); color:#111; font-size:.6rem; font-weight:900; letter-spacing:.08em;
+  padding:2px 7px; border-radius:99px; white-space:nowrap}
+@keyframes turnpulse{50%{box-shadow:0 0 0 5px #f2c31a33, 0 0 34px #f2c31a66}
+  0%,100%{box-shadow:0 0 0 2px #f2c31a88, 0 0 18px #f2c31a55}}
 .seat.me b{color:var(--yellow)}
 .seat .uno{position:absolute; top:-9px; right:-9px; background:var(--red); color:#fff;
   font-family:Bungee,sans-serif; font-size:.6rem; padding:.15rem .4rem; border-radius:6px; animation:pulse 1s infinite}
 
-.center{flex:1; display:flex; align-items:center; justify-content:center; gap:clamp(1rem,5vw,3.5rem); flex-wrap:wrap; position:relative}
+.center{flex:1; min-height:min(46vh,340px); margin:1.4rem 0 2.6rem; display:flex; align-items:center; justify-content:center; gap:clamp(1rem,5vw,3.5rem); flex-wrap:wrap; position:relative}
 .stackzone{display:flex; flex-direction:column; align-items:center; gap:.5rem}
 .stackzone small{color:var(--muted); letter-spacing:.14em; font-size:.7rem; text-transform:uppercase}
-.deck{width:var(--card-w); height:var(--card-h); border-radius:12px; cursor:pointer;
+.deck{position:relative; width:var(--card-w); height:var(--card-h); border-radius:12px; cursor:pointer;
   background:repeating-linear-gradient(135deg,#1b1f2b 0 8px,#141824 8px 16px); border:3px solid #fff2;
   display:grid; place-items:center; font-family:Bungee,sans-serif; color:#fff6; transition:transform .12s}
 .deck:hover{transform:translateY(-6px) rotate(-2deg)}
 .deck.disabled{opacity:.55; cursor:not-allowed}
 .deck.disabled:hover{transform:none}
+.deck.mustdraw{border-color:var(--yellow); color:var(--yellow); animation:deckcall 1.1s ease-in-out infinite}
+.deck.mustdraw::after{content:"\2B06 TAP TO DRAW"; position:absolute; left:50%; bottom:-30px; translate:-50% 0;
+  background:var(--yellow); color:#111; font-family:inherit; font-size:.65rem; font-weight:900;
+  letter-spacing:.08em; padding:3px 9px; border-radius:99px; white-space:nowrap}
+@keyframes deckcall{0%,100%{box-shadow:0 0 0 2px #f2c31a66, 0 0 16px #f2c31a44; transform:translateY(0)}
+  50%{box-shadow:0 0 0 6px #f2c31a33, 0 0 34px #f2c31a77; transform:translateY(-7px)}}
 .colorlight{min-width:var(--card-w); padding:.2rem .6rem; border-radius:999px; transition:background .4s;
   font:800 .72rem Outfit,sans-serif; letter-spacing:.12em; color:#0c1a12; text-align:center;
   box-shadow:0 0 18px #0004, 0 0 0 2px #ffffff22}
@@ -95,18 +119,34 @@ button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
 .handwrap{display:flex; justify-content:center; align-items:flex-end; min-height:calc(var(--card-h) + 30px); padding-top:8px}
 #hand{display:flex; justify-content:center; padding-inline:1rem; max-width:100%; overflow-x:auto; scrollbar-width:none}
 #hand::-webkit-scrollbar{display:none}
-#hand .card{flex:0 0 auto; margin-left:-22px; cursor:pointer; animation:deal .38s ease both;
+#hand .card{flex:0 0 auto; margin-left:-22px; cursor:pointer;
   transition:transform .16s ease, filter .16s ease}
 #hand .card:first-child{margin-left:0}
 #hand .card:hover{transform:translateY(-18px) scale(1.05); z-index:5}
-#hand .card.dead{filter:grayscale(.85) brightness(.55); cursor:not-allowed}
-#hand.waiting .card{filter:brightness(.82) saturate(.95); cursor:default}
-#hand .card.dead:hover{transform:none}
+#hand .card.dead{filter:saturate(.85) brightness(.88); cursor:not-allowed}
+#hand .card.dead::before{content:""; position:absolute; inset:0; border-radius:inherit; background:#05101a2e}
+#hand .card.dead::after{content:"\1F512"; position:absolute; inset:0; display:grid; place-items:center;
+  font-size:1.7rem; line-height:1; text-shadow:none; filter:drop-shadow(0 2px 4px #000a)}
+#hand .card.dead:hover{transform:none; filter:none}
+#hand.waiting .card{cursor:default}
 #hand.mine .card:not(.dead){box-shadow:0 0 0 3px #f2c31a88, 0 10px 22px #0008}
 
 .controls{display:flex; gap:.7rem; justify-content:center; align-items:center; flex-wrap:wrap}
+.chip.turnchip{font-size:1rem; font-weight:800; padding:.5rem .9rem}
+.chip.turnchip.mine{background:var(--yellow); color:#111; border-color:transparent}
 #unoBtn{background:linear-gradient(180deg,#ff6b62,#d8342f); color:#fff; box-shadow:0 6px 0 #8e1f1c}
-#log{max-height:96px; overflow:auto; font-size:.82rem; color:var(--muted); text-align:center; line-height:1.7; white-space:pre-line}
+#unoBtn.called{background:linear-gradient(180deg,#5fd07a,#2e9e4f); box-shadow:0 6px 0 #1d6b35; opacity:1}
+#unoBtn.called::after{content:" \2713"}
+#log{position:fixed; top:50%; right:clamp(.6rem,2vw,1.4rem); transform:translateY(-50%);
+  width:min(230px,22vw); max-height:52vh; overflow:auto; padding:.7rem .85rem;
+  background:#0b1220cc; border:1px solid var(--line); border-radius:14px; backdrop-filter:blur(6px);
+  font-size:.8rem; color:var(--muted); text-align:left; line-height:1.65; white-space:pre-line;
+  scrollbar-width:thin; z-index:5}
+#log::before{content:"LOG"; display:block; font:800 .65rem Outfit,sans-serif; letter-spacing:.16em;
+  color:var(--yellow); margin-bottom:.35rem}
+@media (max-width:1000px){                             /* no room for a side rail: back into the flow */
+  #log{position:static; transform:none; width:auto; max-height:88px; text-align:center; backdrop-filter:none}
+}
 
 /* color picker + winner */
 .overlay{position:fixed; inset:0; background:#03110dcc; backdrop-filter:blur(5px);
@@ -118,6 +158,50 @@ button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
 #winner h2{font-family:Bungee,sans-serif; font-size:2.4rem; margin:.2rem 0 1rem}
 
 @keyframes deal{from{opacity:0; transform:translateY(60px) rotate(9deg) scale(.85)}}
+/* a drawn card flies out of the deck into its slot in the hand */
+@keyframes drawn{
+  0%{opacity:0; transform:translate(var(--dx),var(--dy)) rotate(-90deg) scale(.55)}
+  12%{opacity:1}
+  55%{transform:translate(calc(var(--dx) * .35), calc(var(--dy) * .35 - 42px)) rotate(-40deg) scale(.9)}
+  82%{transform:translate(0,-10px) rotate(4deg) scale(1.1)}
+  100%{transform:none}}
+/* the ring stays after the flight so you can still tell which card just arrived */
+@keyframes justdrawn{0%,70%{box-shadow:0 0 0 4px var(--yellow), 0 0 26px 6px #f2c31a99}
+  100%{box-shadow:0 0 0 0 #f2c31a00, 0 0 0 0 #f2c31a00}}
+@keyframes kick{25%{transform:translateY(-14px) rotate(-6deg) scale(1.07)}
+  60%{transform:translateY(3px) rotate(2deg) scale(.97)}}
+/* MSN nudge */
+@keyframes nudge{0%,100%{transform:translate(0,0)}
+  10%{transform:translate(-9px,5px)} 25%{transform:translate(8px,-6px)}
+  40%{transform:translate(-7px,-4px)} 55%{transform:translate(6px,6px)}
+  70%{transform:translate(-4px,3px)} 85%{transform:translate(3px,-2px)}}
+body.nudged{animation:nudge .55s ease}
+.seat .zap{position:absolute; bottom:-9px; right:-9px; width:22px; height:22px; padding:0; font-size:.75rem;
+  line-height:22px; border-radius:50%; background:#1b2534; color:var(--yellow); box-shadow:0 3px 0 #0d131d;
+  opacity:0; transition:opacity .15s}
+.seat:hover .zap, .seat .zap:focus-visible{opacity:1}
+.seat .zap:disabled{opacity:.25}
+/* emotes */
+.emotebar{display:flex; gap:.35rem; justify-content:center; flex-wrap:wrap}
+.emotebar button{font-size:1.15rem; line-height:1; padding:.3rem .45rem; border-radius:10px;
+  background:#0b1220bb; border:1px solid var(--line); color:inherit; box-shadow:none}
+.emotebar button:hover{transform:translateY(-3px); background:#16203099}
+.bubble{position:fixed; left:50%; top:44%; translate:-50% -50%; pointer-events:none; z-index:40;
+  display:grid; justify-items:center; gap:.4rem; animation:emote 1.6s cubic-bezier(.2,1.4,.4,1) forwards}
+.bubble .face{font-size:clamp(5rem,18vw,11rem); line-height:1;
+  filter:drop-shadow(0 12px 26px #000a); animation:emoteshake .5s ease-in-out .18s 2}
+.bubble .who{font-size:.9rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+  background:#0b1220cc; border:1px solid var(--line); border-radius:99px; padding:.25rem .7rem}
+@keyframes emote{0%{opacity:0; scale:.35; rotate:-12deg}
+  22%{opacity:1; scale:1.15; rotate:3deg}
+  35%{scale:1; rotate:0deg}
+  72%{opacity:1; scale:1}
+  100%{opacity:0; scale:.8; translate:-50% -110%}}
+@keyframes emoteshake{0%,100%{rotate:0deg}25%{rotate:9deg}75%{rotate:-9deg}}
+#hand .card.dealt{animation:deal .38s ease both}
+#hand .card.drawn{animation:drawn .72s cubic-bezier(.25,.8,.3,1) both,
+  justdrawn 1.5s ease-out .72s both; z-index:6}
+.deck.dealing{animation:kick .45s ease}
 @keyframes slam{from{opacity:0; transform:translateY(-90px) rotate(-16deg) scale(1.3)}}
 @keyframes pop{from{opacity:0; transform:scale(.96)}}
 @keyframes pulse{50%{transform:scale(1.16)}}
@@ -147,12 +231,13 @@ button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
     <span class="chip" id="stackChip" style="display:none"></span>
     <span style="flex:1"></span>
     <button id="shareBtn" class="ghost">Copy invite link</button>
+    <button id="botBtn" class="ghost" style="display:none">+ Bot</button>
     <button id="startBtn" class="ghost">Start game</button>
   </div>
 
-  <div class="seats" id="seats"></div>
-
   <div class="center">
+    <div class="felt"></div>
+    <div class="seats" id="seats"></div>
     <div class="stackzone">
       <small>Deck</small>
       <div class="deck" id="deck">UNO</div>
@@ -166,8 +251,10 @@ button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
 
   <div class="controls">
     <button id="unoBtn" disabled>UNO!</button>
-    <span class="chip" id="turnChip">waiting…</span>
+    <span class="chip turnchip" id="turnChip">waiting…</span>
   </div>
+
+  <div class="emotebar" id="emotebar"></div>
 
   <div class="handwrap"><div id="hand"></div></div>
   <div id="log"></div>
@@ -199,6 +286,7 @@ const FACE = { wild:"W", "+4":"+4", skip:"⦸", rev:"⇄", "+2":"+2" };
 const face = (c) => FACE[c.v] || c.v;
 
 let ws, state = null, pendingIndex = null, lastTopKey = "";
+let lastHandSize = -1;                                 // -1 = first render: deal, do not fly from the deck
 
 function cardEl(card, extra = "") {
   const d = document.createElement("div");
@@ -216,11 +304,58 @@ function connect() {
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
     if (msg.type === "error") { $("err").textContent = msg.message; ws.close(); return; }
+    if (msg.type === "nudge") return nudged(msg.from);
+    if (msg.type === "emote") return showEmote(msg.from, msg.emote);
     if (msg.type === "state") { state = msg; $("lobby").style.display = "none"; $("game").style.display = "flex"; render(); }
   };
   ws.onclose = () => { $("turnChip").textContent = "disconnected"; };
 }
 const send = (o) => ws && ws.readyState === 1 && ws.send(JSON.stringify(o));
+
+const EMOTES = ["\u{1F602}", "\u{1F621}", "\u{1F62D}", "\u{1F60E}", "\u{1F44F}", "\u{1F480}", "\u{1F914}", "\u{1F525}"];
+$("emotebar").replaceChildren(...EMOTES.map((e) => {
+  const b = document.createElement("button");
+  b.textContent = e;
+  b.setAttribute("aria-label", `Send ${e}`);
+  b.onclick = () => send({ type: "emote", emote: e });
+  return b;
+}));
+
+/** Emotes are transient: one big centered pop with the sender's name, never in the log. */
+function showEmote(playerId, emote) {
+  const who = state?.players.find((p) => p.id === playerId);
+  const b = document.createElement("div");
+  b.className = "bubble";                              // on body, so a re-render of the seats cannot kill it
+  const face = document.createElement("span");
+  face.className = "face";
+  face.textContent = emote;
+  const name = document.createElement("span");
+  name.className = "who";
+  name.textContent = who ? who.name : "";
+  b.append(face, name);
+  b.addEventListener("animationend", (e) => { if (e.target === b) b.remove(); });
+  document.body.append(b);
+}
+
+function nudged(from) {
+  $("turnChip").textContent = `${from} nudged you!`;
+  document.body.classList.remove("nudged");
+  void document.body.offsetWidth;                      // restart the shake on repeat nudges
+  document.body.classList.add("nudged");
+  setTimeout(() => document.body.classList.remove("nudged"), 600);
+  try {                                                // ponytail: two oscillators beat shipping an audio file
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "square";
+    o.frequency.setValueAtTime(660, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(220, ac.currentTime + 0.35);
+    g.gain.setValueAtTime(0.07, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.4);
+    o.connect(g).connect(ac.destination);
+    o.start(); o.stop(ac.currentTime + 0.4);
+    o.onended = () => ac.close();
+  } catch { /* audio is optional */ }
+}
 
 function render() {
   const s = state;
@@ -228,18 +363,44 @@ function render() {
   $("dirChip").textContent = s.direction > 0 ? "↻ clockwise" : "↺ counter-clockwise";
   $("stackChip").style.display = s.pendingKind ? "" : "none";
   $("stackChip").textContent = `⚡ stack +${s.pendingCards} (${s.pendingKind})`;
+  $("botBtn").style.display = s.started || s.code !== "TEST" ? "none" : "";
+  $("botBtn").disabled = s.players.length >= 8;
   $("startBtn").style.display = s.started ? "none" : "";
   $("startBtn").disabled = s.players.length < 2;
 
   const seats = $("seats");
+  const n = s.players.length;
+  const mine = Math.max(0, s.players.findIndex((p) => p.id === s.you));
+  const nextTurn = s.started && !s.winner ? (s.turn + (s.direction > 0 ? 1 : n - 1)) % n : -1;
   seats.replaceChildren(...s.players.map((p, i) => {
     const seat = document.createElement("div");
-    seat.className = `seat ${s.started && i === s.turn && !s.winner ? "active" : ""} ${p.id === s.you ? "me" : ""}`;
+    const rel = (i - mine + n) % n;                     // you always sit at the bottom of the table
+    const turnsAway = s.started && !s.winner
+      ? (s.direction > 0 ? (i - s.turn + n) % n : (s.turn - i + n) % n) : rel;
+    const a = (90 + s.direction * rel * (360 / n)) * Math.PI / 180;   // seats follow the play direction
+    seat.style.setProperty("--x", (Math.cos(a) * 50).toFixed(2));
+    seat.style.setProperty("--y", (Math.sin(a) * 50).toFixed(2));
+    seat.className = `seat ${s.started && i === s.turn && !s.winner ? "active" : ""} ${p.id === s.you ? "me" : ""} ${i === nextTurn ? "next" : ""}`;
+    seat.dataset.id = p.id;
+    const order = document.createElement("span");
+    order.className = "order";
+    order.textContent = turnsAway === 0 ? "\u25B6" : turnsAway;
+    order.title = turnsAway === 0 ? "playing now" : `${turnsAway} turns away`;
+    seat.append(order);
     if (p.uno) {
       const uno = document.createElement("span");
       uno.className = "uno";
       uno.textContent = "UNO";
       seat.append(uno);
+    }
+    if (p.id !== s.you) {
+      const zap = document.createElement("button");
+      zap.className = "zap";
+      zap.textContent = "\u26a1";
+      zap.title = `Nudge ${p.name}`;
+      zap.setAttribute("aria-label", `Nudge ${p.name}`);
+      zap.onclick = () => send({ type: "nudge", to: p.id });
+      seat.append(zap);
     }
     const name = document.createElement("b");
     name.textContent = p.name;
@@ -267,19 +428,45 @@ function render() {
   const myTurn = hasLegalCard || (s.started && !s.winner && s.players[s.turn]?.id === s.you);
   $("hand").className = myTurn ? "mine" : "waiting";
   $("hand").innerHTML = "";
+  const firstRender = lastHandSize < 0;
+  const drawnFrom = s.hand.length > lastHandSize ? lastHandSize : s.hand.length;  // drawn cards are appended
+  const fresh = [];
   s.hand.forEach((c, i) => {
+    const isNew = !firstRender && i >= drawnFrom;
     const el = cardEl(c, s.canPlay[i] ? "" : "dead");
-    el.style.animationDelay = `${Math.min(i * 25, 400)}ms`;
+    el.classList.add(isNew ? "drawn" : "dealt");
+    el.style.animationDelay = `${isNew ? (i - drawnFrom) * 90 : Math.min(i * 25, 400)}ms`;
     el.onclick = () => { if (!s.canPlay[i]) return; if (c.c === "W") { pendingIndex = i; $("picker").classList.add("show"); } else send({ type: "play", index: i }); };
     $("hand").appendChild(el);
+    if (isNew) fresh.push(el);
   });
+  if (fresh.length) {
+    const d = $("deck").getBoundingClientRect();
+    for (const el of fresh) {                          // aim each new card back at the deck it came from
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--dx", `${d.left - r.left}px`);
+      el.style.setProperty("--dy", `${d.top - r.top}px`);
+    }
+    $("deck").classList.remove("dealing");
+    void $("deck").offsetWidth;                        // restart the kick even on consecutive draws
+    $("deck").classList.add("dealing");
+  }
+  lastHandSize = s.hand.length;
 
-  $("unoBtn").disabled = !(myTurn && s.hand.length === 2);
+  const called = s.players.some((p) => p.id === s.you && p.uno);
+  const unoBtn = $("unoBtn");
+  unoBtn.classList.toggle("called", called);
+  unoBtn.textContent = called ? "UNO" : "UNO!";
+  unoBtn.disabled = called || !(myTurn && s.hand.length === 2 && s.canPlay.some(Boolean));
   const canDraw = myTurn && !s.pendingKind && !hasLegalCard;
   $("deck").style.pointerEvents = canDraw ? "auto" : "none";
   $("deck").classList.toggle("disabled", !canDraw);
+  $("deck").classList.toggle("mustdraw", canDraw);     // no legal card: the deck is the only move
+  const yourTurn = s.started && !s.winner && s.players[s.turn]?.id === s.you;
+  $("turnChip").classList.toggle("mine", yourTurn);
   $("turnChip").textContent = !s.started ? "waiting for players…"
-    : s.winner ? "game over" : myTurn ? "YOUR TURN" : `${s.players[s.turn]?.name}'s turn`;
+    : s.winner ? "game over" : canDraw ? "\u25B6 NO PLAYS \u2014 DRAW FROM THE DECK"
+    : yourTurn ? "\u25B6 YOUR TURN" : `\u23F3 ${s.players[s.turn]?.name}'s turn`;
   $("log").textContent = s.log.slice(-8).join("\n");
 
   if (s.winner) { $("winnerName").textContent = `${s.winner} wins! 🎉`; $("winner").classList.add("show"); }
@@ -293,7 +480,8 @@ $("shareBtn").onclick = async () => {
   setTimeout(() => ($("shareBtn").textContent = "Copy invite link"), 1400);
 };
 $("joinBtn").onclick = connect;
-$("room").onkeydown = $("name").onkeydown = (e) => e.key === "Enter" && connect();
+$("room").onkeydown = $("name").onkeydown = (e) => { if (e.key === "Enter") connect(); };
+$("botBtn").onclick = () => send({ type: "addBot" });
 $("startBtn").onclick = () => send({ type: "start" });
 $("againBtn").onclick = () => { $("winner").classList.remove("show"); send({ type: "start" }); };
 $("deck").onclick = () => send({ type: "draw" });
