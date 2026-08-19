@@ -131,9 +131,9 @@ button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
   <p style="color:var(--muted);margin:.4rem 0 1.4rem">2–8 players. Share the room code.</p>
   <div class="panel">
     <label for="name">Your name</label>
-    <input id="name" maxlength="16" placeholder="Nahuel">
+    <input id="name" maxlength="16" placeholder="Nahuel" autocomplete="off" spellcheck="false" autofocus>
     <label for="room">Room code</label>
-    <input id="room" maxlength="6" placeholder="MAIN" style="text-transform:uppercase">
+    <input id="room" maxlength="6" placeholder="MAIN" autocomplete="off" spellcheck="false" style="text-transform:uppercase">
     <button id="joinBtn">Join table</button>
     <p id="err" style="color:var(--red);min-height:1.2em;margin:.7rem 0 0;font-size:.9rem"></p>
   </div>
