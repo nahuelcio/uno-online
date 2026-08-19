@@ -164,6 +164,20 @@ button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
   box-shadow:0 0 0 2px #0b1220; animation:pulse .8s infinite}
 #stackChip{background:var(--red); color:#fff; border-color:transparent; font-weight:800}
 #unoBtn.armed{animation:pulse .55s infinite}
+.seat .catch{position:absolute; inset:auto -6px -14px auto; padding:.15rem .5rem; border-radius:999px;
+  font:800 .68rem Outfit,sans-serif; background:var(--red); color:#fff; box-shadow:0 3px 0 #8e1f1c;
+  animation:pulse .6s infinite; opacity:1}
+#banner{position:fixed; top:18%; left:50%; transform:translateX(-50%); z-index:30; pointer-events:none;
+  display:none; padding:.9rem 1.6rem; border-radius:18px; text-align:center;
+  background:#0b1220ee; border:2px solid var(--red); box-shadow:0 18px 50px #000a;
+  font:800 1.5rem Outfit,sans-serif; color:#fff; white-space:nowrap}
+#banner.show{display:block; animation:bannerIn 2.6s ease both}
+#banner .icon{display:block; font-size:2.2rem; line-height:1.1}
+@keyframes bannerIn{0%{opacity:0; transform:translateX(-50%) scale(.6) rotate(-6deg)}
+  12%{opacity:1; transform:translateX(-50%) scale(1.12)}
+  20%{transform:translateX(-50%) scale(1)}
+  80%{opacity:1; transform:translateX(-50%) scale(1)}
+  100%{opacity:0; transform:translateX(-50%) translateY(-24px) scale(.95)}}
 
 @media (max-width:1000px){                             /* no room for a side rail: back into the flow */
   #side{position:static; transform:none; width:auto}
@@ -286,12 +300,14 @@ body.nudged{animation:nudge .55s ease}
     <div id="chat">
       <div id="chatlog"></div>
       <form id="chatform" autocomplete="off">
-        <input id="chatinput" maxlength="140" placeholder="Escribí algo…" aria-label="Mensaje de chat">
+        <input id="chatinput" maxlength="140" placeholder="Escribí algo… o /add nombre 2" aria-label="Mensaje de chat">
         <button type="submit">Enviar</button>
       </form>
     </div>
   </div>
 </div>
+
+<div id="banner" role="status" aria-live="polite"></div>
 
 <div class="overlay" id="picker">
   <div class="panel" style="text-align:center">
@@ -343,6 +359,7 @@ function connect() {
     if (msg.type === "emote") return showEmote(msg.from, msg.emote);
     if (msg.type === "ate") return showEmote(msg.who, `+${msg.cards}`, `se comió ${msg.cards === 1 ? "1 carta" : msg.cards + " cartas"} del ${msg.kind}`);
     if (msg.type === "chat") return addChat(msg.from, msg.text);
+    if (msg.type === "announce") return banner(msg.text, msg.icon);
     if (msg.type === "state") { state = msg; $("lobby").style.display = "none"; $("game").style.display = "flex"; render(); }
   };
   ws.onclose = () => { $("turnChip").textContent = "desconectado"; };
@@ -372,6 +389,18 @@ function showEmote(playerId, emote, note) {
   b.append(face, name);
   b.addEventListener("animationend", (e) => { if (e.target === b) b.remove(); });
   document.body.append(b);
+}
+
+function banner(text, icon = "") {
+  const b = $("banner");
+  b.replaceChildren();
+  if (icon) { const i = document.createElement("span"); i.className = "icon"; i.textContent = icon; b.append(i); }
+  b.append(document.createTextNode(text));             // server text, still rendered as text
+  b.classList.remove("show");
+  void b.offsetWidth;                                  // restart the animation on back-to-back banners
+  b.classList.add("show");
+  clearTimeout(banner.t);
+  banner.t = setTimeout(() => b.classList.remove("show"), 2600);
 }
 
 function addChat(from, text) {
@@ -453,6 +482,14 @@ function render() {
     seat.style.setProperty("--y", (Math.sin(a) * 50).toFixed(2));
     seat.className = `seat ${s.started && i === s.turn && !s.winner ? "active" : ""} ${p.id === s.you ? "me" : ""} ${i === nextTurn ? "next" : ""}`;
     seat.dataset.id = p.id;
+    if (s.unoWindow?.id === p.id && p.id !== s.you && p.cards === 1 && !p.uno) {
+      const c = document.createElement("button");
+      c.className = "catch";
+      c.textContent = "CATCH!";
+      c.title = `${p.name} never called UNO`;
+      c.onclick = () => send({ type: "catch", target: p.id });
+      seat.append(c);
+    }
     if (s.pendingKind && i === s.turn && !s.winner) {  // the stack lands here unless they answer it
       const hit = document.createElement("span");
       hit.className = "stackhit";

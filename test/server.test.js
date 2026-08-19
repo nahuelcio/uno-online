@@ -99,6 +99,40 @@ test('missing the UNO grace window still costs +2', () => {
   assert.equal(first.hand.length, 3, 'silence costs two cards');
 });
 
+test('another player can catch a silent UNO and force the +2', () => {
+  const first = player('first', [{ c: 'R', v: '1' }, { c: 'R', v: '2' }], false);
+  const second = player('second', [{ c: 'G', v: '9' }]);
+  const room = roomWith([first, second], {
+    pile: [{ c: 'R', v: '5' }],
+    deck: Array.from({ length: 10 }, () => ({ c: 'B', v: '7' })),
+  });
+
+  room.play(first, 0);
+  room.catchUno(second, first.id);
+  assert.equal(first.hand.length, 3, 'the caught player eats two cards');
+  assert.equal(room.unoWindow, null);
+
+  room.catchUno(second, first.id);                      // window is gone: no double dipping
+  assert.equal(first.hand.length, 3);
+});
+
+test('a player cannot catch themselves and a called UNO is safe', () => {
+  const first = player('first', [{ c: 'R', v: '1' }, { c: 'R', v: '2' }], false);
+  const second = player('second', [{ c: 'G', v: '9' }]);
+  const room = roomWith([first, second], {
+    pile: [{ c: 'R', v: '5' }],
+    deck: Array.from({ length: 10 }, () => ({ c: 'B', v: '7' })),
+  });
+
+  room.play(first, 0);
+  room.catchUno(first, first.id);
+  assert.equal(first.hand.length, 1, 'self-catch must be ignored');
+
+  room.callUno(first);
+  room.catchUno(second, first.id);
+  assert.equal(first.hand.length, 1, 'calling UNO closes the hunt');
+});
+
 test('bots are only allowed at the TEST table', () => {
   const test = new Room('TEST');
   test.addBot();
@@ -121,4 +155,19 @@ test('rejects a manual draw while the active player has a legal card', () => {
   room.drawTurn(first);
   assert.equal(first.hand.length, 1);
   assert.equal(room.turn, 0);
+});
+
+test('/add hands extra cards to the named player', () => {
+  const a = player('ana', [{ c: 'R', v: '1' }]);
+  const b = player('beto', [{ c: 'G', v: '2' }]);
+  const room = roomWith([a, b], {
+    pile: [{ c: 'R', v: '5' }],
+    deck: [{ c: 'B', v: '9' }, { c: 'Y', v: '3' }, { c: 'G', v: '7' }],
+  });
+
+  assert.equal(room.addCards(a, '/add BETO 2'), true);
+  assert.equal(b.hand.length, 3);
+  assert.equal(room.addCards(a, '/add nadie 2'), true, 'an unknown name is still swallowed');
+  assert.equal(room.addCards(a, '/add ana'), true);
+  assert.equal(a.hand.length, 2, 'no count means one card');
 });
