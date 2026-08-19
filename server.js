@@ -286,22 +286,6 @@ class Room {
     this.botTimer.unref?.();                           // never hold the process open for a bot
   }
 
-  /** `/add <nombre> [n]`: house rule, anyone at the table can hand out extra cards. */
-  addCards(from, text) {
-    const m = /^\/add\s+(.+?)(?:\s+(\d{1,2}))?$/.exec(text);
-    if (!m) return false;
-    const target = this.players.find((p) => p.name.toLowerCase() === m[1].toLowerCase());
-    const n = Math.min(Number(m[2] || 1), 20);
-    if (!target || !this.started || !n) return true;                 // swallowed: it was a command, not chat
-    const dealt = this.draw(target, n);
-    this.say(`${from.name} le sumó ${dealt} carta${dealt === 1 ? "" : "s"} a ${target.name}`);
-    const packet = JSON.stringify({ type: "clown", who: target.id, cards: dealt });
-    for (const q of this.players) if (q.ws?.readyState === 1) q.ws.send(packet);
-    if (target.hand.length > 1) target.calledUno = false;
-    this.broadcast();
-    return true;
-  }
-
   /** Free text, so it is length-capped, rate limited, and only ever rendered as text on the client. */
   chat(from, text) {
     const clean = text.replace(/\s+/g, " ").trim().slice(0, CHAT_MAX_LEN);
@@ -309,7 +293,6 @@ class Room {
     const now = Date.now();
     if (now - (from.lastChat || 0) < CHAT_COOLDOWN_MS) return;
     from.lastChat = now;
-    if (clean.startsWith("/add ") && this.addCards(from, clean)) return;
     const packet = JSON.stringify({ type: "chat", from: from.name, text: clean });
     for (const q of this.players) if (q.ws.readyState === 1) q.ws.send(packet);
   }

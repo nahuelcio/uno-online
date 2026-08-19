@@ -300,7 +300,7 @@ body.nudged{animation:nudge .55s ease}
     <div id="chat">
       <div id="chatlog"></div>
       <form id="chatform" autocomplete="off">
-        <input id="chatinput" maxlength="140" placeholder="Escribí algo… o /add nombre 2" aria-label="Mensaje de chat">
+        <input id="chatinput" maxlength="140" placeholder="Escribí algo…" aria-label="Mensaje de chat">
         <button type="submit">Enviar</button>
       </form>
     </div>
@@ -357,8 +357,6 @@ function connect() {
     if (msg.type === "error") { $("err").textContent = msg.message; ws.close(); return; }
     if (msg.type === "nudge") return nudged(msg.from);
     if (msg.type === "emote") return showEmote(msg.from, msg.emote);
-    if (msg.type === "clown")
-      return showEmote(msg.who, "🤡", `comió ${msg.cards} carta${msg.cards === 1 ? "" : "s"} de regalo`);
     if (msg.type === "ate") return showEmote(msg.who, `+${msg.cards}`, `se comió ${msg.cards === 1 ? "1 carta" : msg.cards + " cartas"} del ${msg.kind}`);
     if (msg.type === "chat") return addChat(msg.from, msg.text);
     if (msg.type === "announce") return banner(msg.text, msg.icon);

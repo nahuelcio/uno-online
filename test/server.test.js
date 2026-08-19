@@ -157,17 +157,3 @@ test('rejects a manual draw while the active player has a legal card', () => {
   assert.equal(room.turn, 0);
 });
 
-test('/add hands extra cards to the named player', () => {
-  const a = player('ana', [{ c: 'R', v: '1' }]);
-  const b = player('beto', [{ c: 'G', v: '2' }]);
-  const room = roomWith([a, b], {
-    pile: [{ c: 'R', v: '5' }],
-    deck: [{ c: 'B', v: '9' }, { c: 'Y', v: '3' }, { c: 'G', v: '7' }],
-  });
-
-  assert.equal(room.addCards(a, '/add BETO 2'), true);
-  assert.equal(b.hand.length, 3);
-  assert.equal(room.addCards(a, '/add nadie 2'), true, 'an unknown name is still swallowed');
-  assert.equal(room.addCards(a, '/add ana'), true);
-  assert.equal(a.hand.length, 2, 'no count means one card');
-});
