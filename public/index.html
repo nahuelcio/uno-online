@@ -213,6 +213,7 @@ body.nudged{animation:nudge .55s ease}
 .emotebar button:hover{transform:translateY(-3px); background:#16203099}
 .bubble{position:fixed; left:50%; top:44%; translate:-50% -50%; pointer-events:none; z-index:40;
   display:grid; justify-items:center; gap:.4rem; animation:emote 1.6s cubic-bezier(.2,1.4,.4,1) forwards}
+.bubble.penalty .face{font-family:Bungee,sans-serif; color:var(--red)}
 .bubble .face{font-size:clamp(5rem,18vw,11rem); line-height:1;
   filter:drop-shadow(0 12px 26px #000a); animation:emoteshake .5s ease-in-out .18s 2}
 .bubble .who{font-size:.9rem; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
@@ -342,6 +343,7 @@ function connect() {
     if (msg.type === "error") { $("err").textContent = msg.message; ws.close(); return; }
     if (msg.type === "nudge") return nudged(msg.from);
     if (msg.type === "emote") return showEmote(msg.from, msg.emote);
+    if (msg.type === "ate") return showEmote(msg.who, `+${msg.cards}`, `ate the ${msg.kind} stack`);
     if (msg.type === "chat") return addChat(msg.from, msg.text);
     if (msg.type === "state") { state = msg; $("lobby").style.display = "none"; $("game").style.display = "flex"; render(); }
   };
@@ -359,16 +361,16 @@ $("emotebar").replaceChildren(...EMOTES.map((e) => {
 }));
 
 /** Emotes are transient: one big centered pop with the sender's name, never in the log. */
-function showEmote(playerId, emote) {
+function showEmote(playerId, emote, note) {
   const who = state?.players.find((p) => p.id === playerId);
   const b = document.createElement("div");
-  b.className = "bubble";                              // on body, so a re-render of the seats cannot kill it
+  b.className = note ? "bubble penalty" : "bubble";                              // on body, so a re-render of the seats cannot kill it
   const face = document.createElement("span");
   face.className = "face";
   face.textContent = emote;
   const name = document.createElement("span");
   name.className = "who";
-  name.textContent = who ? who.name : "";
+  name.textContent = note ? `${who ? who.name : ""} ${note}` : (who ? who.name : "");
   b.append(face, name);
   b.addEventListener("animationend", (e) => { if (e.target === b) b.remove(); });
   document.body.append(b);
@@ -453,6 +455,13 @@ function render() {
     seat.style.setProperty("--y", (Math.sin(a) * 50).toFixed(2));
     seat.className = `seat ${s.started && i === s.turn && !s.winner ? "active" : ""} ${p.id === s.you ? "me" : ""} ${i === nextTurn ? "next" : ""}`;
     seat.dataset.id = p.id;
+    if (s.pendingKind && i === s.turn && !s.winner) {  // the stack lands here unless they answer it
+      const hit = document.createElement("span");
+      hit.className = "stackhit";
+      hit.textContent = `+${s.pendingCards}`;
+      hit.title = `Draws ${s.pendingCards} unless answered with a +2 or +4`;
+      seat.append(hit);
+    }
     const order = document.createElement("span");
     order.className = "order";
     order.textContent = turnsAway === 0 ? "\u25B6" : turnsAway;
@@ -535,7 +544,10 @@ function render() {
   const unoBtn = $("unoBtn");
   unoBtn.classList.toggle("called", called);
   unoBtn.textContent = called ? "UNO" : "UNO!";
-$("joinBtn").onclick = () => { window.Notification?.requestPermission?.(); connect(); };
+  // Armed either while holding two cards, or during the grace window right after dumping the second-to-last.
+  const inGraceWindow = s.unoWindow?.id === s.you && s.hand.length === 1;
+  unoBtn.disabled = called || !(inGraceWindow || (myTurn && s.hand.length === 2 && s.canPlay.some(Boolean)));
+  unoBtn.classList.toggle("armed", inGraceWindow && !called);
   const canDraw = myTurn && !s.pendingKind && !hasLegalCard;
   $("deck").style.pointerEvents = canDraw ? "auto" : "none";
   $("deck").classList.toggle("disabled", !canDraw);

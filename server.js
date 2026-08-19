@@ -116,6 +116,8 @@ class Room {
     const p = this.players[this.turn];
     if (this.pendingKind && !this.legalFor(p).length) {
       this.say(`${p.name} takes ${this.pendingCards} from the ${this.pendingKind} stack`);
+      const packet = JSON.stringify({ type: "ate", who: p.id, cards: this.pendingCards, kind: this.pendingKind });
+      for (const q of this.players) if (q.ws?.readyState === 1) q.ws.send(packet);
       this.draw(p, this.pendingCards);
       this.pendingKind = null;
       this.pendingCards = 0;

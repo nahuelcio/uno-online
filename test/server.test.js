@@ -66,6 +66,39 @@ test('stacks penalty cards without any cap across a long chain', () => {
   assert.equal(room.pendingKind, null);
 });
 
+test('UNO can be called during the grace window after the second-to-last card', () => {
+  const first = player('first', [{ c: 'R', v: '1' }, { c: 'R', v: '2' }], false);
+  const second = player('second', [{ c: 'G', v: '9' }]);
+  const room = roomWith([first, second], {
+    pile: [{ c: 'R', v: '5' }],
+    deck: Array.from({ length: 10 }, () => ({ c: 'B', v: '7' })),
+  });
+
+  room.play(first, 0);
+  assert.equal(first.hand.length, 1, 'no instant +2: the window is still open');
+  assert.equal(room.unoWindow.id, first.id);
+
+  room.callUno(first);                                  // called from outside their turn, mid-window
+  assert.equal(first.calledUno, true);
+  assert.equal(room.unoWindow, null);
+
+  room.closeUnoWindow(first);                           // timer fires late: already safe
+  assert.equal(first.hand.length, 1);
+});
+
+test('missing the UNO grace window still costs +2', () => {
+  const first = player('first', [{ c: 'R', v: '1' }, { c: 'R', v: '2' }], false);
+  const second = player('second', [{ c: 'G', v: '9' }]);
+  const room = roomWith([first, second], {
+    pile: [{ c: 'R', v: '5' }],
+    deck: Array.from({ length: 10 }, () => ({ c: 'B', v: '7' })),
+  });
+
+  room.play(first, 0);
+  room.closeUnoWindow(first);
+  assert.equal(first.hand.length, 3, 'silence costs two cards');
+});
+
 test('bots are only allowed at the TEST table', () => {
   const test = new Room('TEST');
   test.addBot();
