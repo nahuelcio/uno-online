@@ -237,7 +237,7 @@ body.nudged{animation:nudge .55s ease}
 
 <div id="lobby">
   <h1>UNO<span style="color:var(--yellow)">·</span>ONLINE</h1>
-  <p style="color:var(--muted);margin:.4rem 0 1.4rem">2–10 players. Share the room code.</p>
+  <p style="color:var(--muted);margin:.4rem 0 1.4rem">2–12 players. Share the room code.</p>
   <div class="panel">
     <label for="name">Your name</label>
     <input id="name" maxlength="16" placeholder="Nahuel" autocomplete="off" spellcheck="false" autofocus>
@@ -433,7 +433,7 @@ function render() {
     ? `⚡ ${s.players[s.turn].name} draws ${s.pendingCards} unless they stack a ${s.pendingKind}`
     : "";
   $("botBtn").style.display = s.started || s.code !== "TEST" ? "none" : "";
-  $("botBtn").disabled = s.players.length >= 10;
+  $("botBtn").disabled = s.players.length >= 12;
   $("startBtn").style.display = s.started ? "none" : "";
   $("startBtn").disabled = s.players.length < 2;
 

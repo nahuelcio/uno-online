@@ -1,11 +1,11 @@
-// Authoritative UNO server: rooms of 2-10 players over WebSockets.
+// Authoritative UNO server: rooms of 2-12 players over WebSockets.
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { WebSocketServer } = require("ws");
 
 const PORT = process.env.PORT || 4321;   // 3000 collides with too much other tooling
-const MAX_PLAYERS = 10;
+const MAX_PLAYERS = 12;
 const NUDGE_COOLDOWN_MS = 700;
 const EMOTE_COOLDOWN_MS = 1200;
 const BOT_DELAY_MS = 900;

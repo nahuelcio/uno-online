@@ -1,7 +1,7 @@
 {
   "name": "uno-online",
   "version": "1.0.0",
-  "description": "Online UNO for 2-8 players over WebSockets",
+  "description": "Online UNO for 2-12 players over WebSockets",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
