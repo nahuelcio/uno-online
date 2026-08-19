@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UNO Online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bungee&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --red:#e8433f; --green:#3faa54; --blue:#3d7be0; --yellow:#f2c31a;
+  --felt:#0d5c3f; --felt-2:#083f2b;
+  --ink:#f6f7fb; --muted:#a9b6c4; --panel:#131924; --line:#26303f;
+  --card-w:78px; --card-h:116px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; color:var(--ink); font-family:Outfit,system-ui,sans-serif;
+  background:radial-gradient(120% 110% at 50% 8%, var(--felt) 0%, var(--felt-2) 55%, #04211a 100%);
+  min-height:100dvh; display:flex; flex-direction:column; overflow-x:hidden;
+}
+h1{font-family:Bungee,Impact,sans-serif; margin:0; font-size:2.6rem; letter-spacing:.04em;
+   text-shadow:0 3px 0 #0006, 0 0 26px #f2c31a55}
+
+/* ---------- lobby ---------- */
+#lobby{margin:auto; text-align:center; padding:2rem 1.2rem; animation:pop .35s ease both}
+.panel{background:#0b1220cc; backdrop-filter:blur(8px); border:1px solid var(--line);
+  border-radius:20px; padding:1.6rem; box-shadow:0 24px 60px #0007; max-width:420px}
+input{width:100%; margin:.4rem 0 .9rem; padding:.7rem .9rem; border-radius:12px; font:inherit;
+  background:#0f1622; color:var(--ink); border:1px solid var(--line)}
+input:focus{outline:2px solid var(--yellow); outline-offset:1px}
+label{display:block; text-align:left; font-size:.82rem; color:var(--muted); letter-spacing:.06em; text-transform:uppercase}
+button{font:600 1rem Outfit,sans-serif; cursor:pointer; border:0; border-radius:12px;
+  padding:.75rem 1.3rem; color:#08131f; background:linear-gradient(180deg,#ffd94a,#f2b60d);
+  box-shadow:0 6px 0 #b8860b, 0 12px 24px #0006; transition:transform .08s, box-shadow .08s}
+button:active:not(:disabled){transform:translateY(4px); box-shadow:0 2px 0 #b8860b}
+button:disabled{opacity:.45; cursor:not-allowed; box-shadow:none}
+button.ghost{background:#1b2534; color:var(--ink); box-shadow:0 5px 0 #0d131d}
+
+/* ---------- table ---------- */
+#game{display:none; flex:1; flex-direction:column; gap:.6rem; padding:.9rem clamp(.6rem,3vw,2rem) 1.2rem}
+.topbar{display:flex; align-items:center; gap:.8rem; flex-wrap:wrap}
+.topbar h1{font-size:1.5rem}
+.chip{background:#0b1220aa; border:1px solid var(--line); border-radius:999px; padding:.3rem .8rem; font-size:.85rem; color:var(--muted)}
+.seats{display:flex; gap:.6rem; flex-wrap:wrap; justify-content:center}
+.seat{position:relative; background:#0b1220bb; border:1px solid var(--line); border-radius:14px;
+  padding:.5rem .8rem; min-width:104px; text-align:center; transition:.25s}
+.seat b{display:block; font-size:.95rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:11ch}
+.seat small{color:var(--muted)}
+.seat.active{border-color:var(--yellow); box-shadow:0 0 0 2px #f2c31a55, 0 0 26px #f2c31a44; transform:translateY(-3px)}
+.seat.me b{color:var(--yellow)}
+.seat .uno{position:absolute; top:-9px; right:-9px; background:var(--red); color:#fff;
+  font-family:Bungee,sans-serif; font-size:.6rem; padding:.15rem .4rem; border-radius:6px; animation:pulse 1s infinite}
+
+.center{flex:1; display:flex; align-items:center; justify-content:center; gap:clamp(1rem,5vw,3.5rem); flex-wrap:wrap; position:relative}
+.stackzone{display:flex; flex-direction:column; align-items:center; gap:.5rem}
+.stackzone small{color:var(--muted); letter-spacing:.14em; font-size:.7rem; text-transform:uppercase}
+.deck{width:var(--card-w); height:var(--card-h); border-radius:12px; cursor:pointer;
+  background:repeating-linear-gradient(135deg,#1b1f2b 0 8px,#141824 8px 16px); border:3px solid #fff2;
+  display:grid; place-items:center; font-family:Bungee,sans-serif; color:#fff6; transition:transform .12s}
+.deck:hover{transform:translateY(-6px) rotate(-2deg)}
+.deck.disabled{opacity:.55; cursor:not-allowed}
+.deck.disabled:hover{transform:none}
+.colorlight{min-width:var(--card-w); padding:.2rem .6rem; border-radius:999px; transition:background .4s;
+  font:800 .72rem Outfit,sans-serif; letter-spacing:.12em; color:#0c1a12; text-align:center;
+  box-shadow:0 0 18px #0004, 0 0 0 2px #ffffff22}
+
+/* cards */
+.card{
+  width:var(--card-w); height:var(--card-h); border-radius:12px; position:relative;
+  display:grid; place-items:center; color:#fff; font-family:Bungee,sans-serif; font-size:1.5rem;
+  border:4px solid #fff; box-shadow:0 8px 18px #0007; user-select:none; overflow:hidden;
+  background:var(--c,#333);
+}
+.card::before{content:""; position:absolute; inset:9%; border-radius:50%/38%;
+  background:#ffffff2e; transform:rotate(-22deg)}
+.card span{position:relative; text-shadow:0 3px 0 #0005}
+.card .corner{position:absolute; font-size:.62rem; opacity:.95}
+.card .corner.tl{top:4px; left:6px}
+.card .corner.br{bottom:4px; right:6px; transform:rotate(180deg)}
+.R{--c:linear-gradient(160deg,#f2605c,#c9302c)}
+.G{--c:linear-gradient(160deg,#57c26d,#2c8341)}
+.B{--c:linear-gradient(160deg,#5a95ea,#2a5cb0)}
+.Y{--c:linear-gradient(160deg,#ffd75e,#d8a406); color:#40320a}
+.Y span{text-shadow:0 3px 0 #fff6}
+.W{--c:conic-gradient(from 45deg,#e8433f 0 25%,#f2c31a 0 50%,#3faa54 0 75%,#3d7be0 0)}
+
+#pile{position:relative; width:var(--card-w); height:var(--card-h)}
+#pile .card{position:absolute; inset:0}
+#pile .card.fresh{animation:slam .34s cubic-bezier(.2,1.5,.4,1) both}
+
+/* hand */
+.handwrap{display:flex; justify-content:center; align-items:flex-end; min-height:calc(var(--card-h) + 30px); padding-top:8px}
+#hand{display:flex; justify-content:center; padding-inline:1rem; max-width:100%; overflow-x:auto; scrollbar-width:none}
+#hand::-webkit-scrollbar{display:none}
+#hand .card{flex:0 0 auto; margin-left:-22px; cursor:pointer; animation:deal .38s ease both;
+  transition:transform .16s ease, filter .16s ease}
+#hand .card:first-child{margin-left:0}
+#hand .card:hover{transform:translateY(-18px) scale(1.05); z-index:5}
+#hand .card.dead{filter:grayscale(.85) brightness(.55); cursor:not-allowed}
+#hand.waiting .card{filter:brightness(.82) saturate(.95); cursor:default}
+#hand .card.dead:hover{transform:none}
+#hand.mine .card:not(.dead){box-shadow:0 0 0 3px #f2c31a88, 0 10px 22px #0008}
+
+.controls{display:flex; gap:.7rem; justify-content:center; align-items:center; flex-wrap:wrap}
+#unoBtn{background:linear-gradient(180deg,#ff6b62,#d8342f); color:#fff; box-shadow:0 6px 0 #8e1f1c}
+#log{max-height:96px; overflow:auto; font-size:.82rem; color:var(--muted); text-align:center; line-height:1.7; white-space:pre-line}
+
+/* color picker + winner */
+.overlay{position:fixed; inset:0; background:#03110dcc; backdrop-filter:blur(5px);
+  display:none; place-items:center; z-index:20; animation:pop .2s ease both}
+.overlay.show{display:grid}
+.swatches{display:grid; grid-template-columns:repeat(2,88px); gap:14px; margin-top:1rem}
+.sw{width:88px; height:88px; border-radius:18px; cursor:pointer; border:4px solid #fff3; transition:transform .12s}
+.sw:hover{transform:scale(1.08) rotate(3deg)}
+#winner h2{font-family:Bungee,sans-serif; font-size:2.4rem; margin:.2rem 0 1rem}
+
+@keyframes deal{from{opacity:0; transform:translateY(60px) rotate(9deg) scale(.85)}}
+@keyframes slam{from{opacity:0; transform:translateY(-90px) rotate(-16deg) scale(1.3)}}
+@keyframes pop{from{opacity:0; transform:scale(.96)}}
+@keyframes pulse{50%{transform:scale(1.16)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important; transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="lobby">
+  <h1>UNO<span style="color:var(--yellow)">·</span>ONLINE</h1>
+  <p style="color:var(--muted);margin:.4rem 0 1.4rem">2–8 players. Share the room code.</p>
+  <div class="panel">
+    <label for="name">Your name</label>
+    <input id="name" maxlength="16" placeholder="Nahuel">
+    <label for="room">Room code</label>
+    <input id="room" maxlength="6" placeholder="MAIN" style="text-transform:uppercase">
+    <button id="joinBtn">Join table</button>
+    <p id="err" style="color:var(--red);min-height:1.2em;margin:.7rem 0 0;font-size:.9rem"></p>
+  </div>
+</div>
+
+<div id="game">
+  <div class="topbar">
+    <h1>UNO</h1>
+    <span class="chip">Room <b id="codeChip">—</b></span>
+    <span class="chip" id="dirChip">↻ clockwise</span>
+    <span class="chip" id="stackChip" style="display:none"></span>
+    <span style="flex:1"></span>
+    <button id="shareBtn" class="ghost">Copy invite link</button>
+    <button id="startBtn" class="ghost">Start game</button>
+  </div>
+
+  <div class="seats" id="seats"></div>
+
+  <div class="center">
+    <div class="stackzone">
+      <small>Deck</small>
+      <div class="deck" id="deck">UNO</div>
+    </div>
+    <div class="stackzone">
+      <small>Discard</small>
+      <div id="pile"></div>
+      <div class="colorlight" id="colorlight"><span id="colorname">—</span></div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="unoBtn" disabled>UNO!</button>
+    <span class="chip" id="turnChip">waiting…</span>
+  </div>
+
+  <div class="handwrap"><div id="hand"></div></div>
+  <div id="log"></div>
+</div>
+
+<div class="overlay" id="picker">
+  <div class="panel" style="text-align:center">
+    <h3 style="margin:0">Pick a color</h3>
+    <div class="swatches">
+      <div class="sw" data-c="R" style="background:var(--red)"></div>
+      <div class="sw" data-c="G" style="background:var(--green)"></div>
+      <div class="sw" data-c="B" style="background:var(--blue)"></div>
+      <div class="sw" data-c="Y" style="background:var(--yellow)"></div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="winner">
+  <div class="panel" style="text-align:center">
+    <h2 id="winnerName">—</h2>
+    <button id="againBtn">New game</button>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const COLORVAR = { R:"var(--red)", G:"var(--green)", B:"var(--blue)", Y:"var(--yellow)", W:"#888" };
+const FACE = { wild:"W", "+4":"+4", skip:"⦸", rev:"⇄", "+2":"+2" };
+const face = (c) => FACE[c.v] || c.v;
+
+let ws, state = null, pendingIndex = null, lastTopKey = "";
+
+function cardEl(card, extra = "") {
+  const d = document.createElement("div");
+  d.className = `card ${card.c} ${extra}`;
+  d.innerHTML = `<span class="corner tl">${face(card)}</span><span>${face(card)}</span><span class="corner br">${face(card)}</span>`;
+  return d;
+}
+
+function connect() {
+  const name = $("name").value.trim() || "player";
+  const code = ($("room").value.trim() || "MAIN").toUpperCase();
+  localStorage.setItem("uno.name", name);
+  ws = new WebSocket(`${location.protocol === "https:" ? "wss" : "ws"}://${location.host}`);
+  ws.onopen = () => ws.send(JSON.stringify({ type: "join", name, code }));
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === "error") { $("err").textContent = msg.message; ws.close(); return; }
+    if (msg.type === "state") { state = msg; $("lobby").style.display = "none"; $("game").style.display = "flex"; render(); }
+  };
+  ws.onclose = () => { $("turnChip").textContent = "disconnected"; };
+}
+const send = (o) => ws && ws.readyState === 1 && ws.send(JSON.stringify(o));
+
+function render() {
+  const s = state;
+  $("codeChip").textContent = s.code;
+  $("dirChip").textContent = s.direction > 0 ? "↻ clockwise" : "↺ counter-clockwise";
+  $("stackChip").style.display = s.pendingKind ? "" : "none";
+  $("stackChip").textContent = `⚡ stack +${s.pendingCards} (${s.pendingKind})`;
+  $("startBtn").style.display = s.started ? "none" : "";
+  $("startBtn").disabled = s.players.length < 2;
+
+  const seats = $("seats");
+  seats.replaceChildren(...s.players.map((p, i) => {
+    const seat = document.createElement("div");
+    seat.className = `seat ${s.started && i === s.turn && !s.winner ? "active" : ""} ${p.id === s.you ? "me" : ""}`;
+    if (p.uno) {
+      const uno = document.createElement("span");
+      uno.className = "uno";
+      uno.textContent = "UNO";
+      seat.append(uno);
+    }
+    const name = document.createElement("b");
+    name.textContent = p.name;
+    const cards = document.createElement("small");
+    cards.textContent = s.started ? `${p.cards} cards` : "ready";
+    seat.append(name, cards);
+    return seat;
+  }));
+
+  const pile = $("pile");
+  if (s.top) {
+    const key = s.top.c + s.top.v + (s.lastPlay ? s.lastPlay.at : "");
+    if (key !== lastTopKey) {
+      lastTopKey = key;
+      const el = cardEl(s.top, "fresh");
+      el.style.transform = `rotate(${(Math.random() * 16 - 8).toFixed(1)}deg)`;
+      pile.append(el);                                   // newest card sits on top of the stack
+      while (pile.children.length > 4) pile.firstChild.remove();
+    }
+  } else pile.innerHTML = "";
+  $("colorlight").style.background = COLORVAR[s.color] || "#333";
+  $("colorname").textContent = { R:"RED", G:"GREEN", B:"BLUE", Y:"YELLOW" }[s.color] || "—";
+
+  const hasLegalCard = s.canPlay.some(Boolean);
+  const myTurn = hasLegalCard || (s.started && !s.winner && s.players[s.turn]?.id === s.you);
+  $("hand").className = myTurn ? "mine" : "waiting";
+  $("hand").innerHTML = "";
+  s.hand.forEach((c, i) => {
+    const el = cardEl(c, s.canPlay[i] ? "" : "dead");
+    el.style.animationDelay = `${Math.min(i * 25, 400)}ms`;
+    el.onclick = () => { if (!s.canPlay[i]) return; if (c.c === "W") { pendingIndex = i; $("picker").classList.add("show"); } else send({ type: "play", index: i }); };
+    $("hand").appendChild(el);
+  });
+
+  $("unoBtn").disabled = !(myTurn && s.hand.length === 2);
+  const canDraw = myTurn && !s.pendingKind && !hasLegalCard;
+  $("deck").style.pointerEvents = canDraw ? "auto" : "none";
+  $("deck").classList.toggle("disabled", !canDraw);
+  $("turnChip").textContent = !s.started ? "waiting for players…"
+    : s.winner ? "game over" : myTurn ? "YOUR TURN" : `${s.players[s.turn]?.name}'s turn`;
+  $("log").textContent = s.log.slice(-8).join("\n");
+
+  if (s.winner) { $("winnerName").textContent = `${s.winner} wins! 🎉`; $("winner").classList.add("show"); }
+  else $("winner").classList.remove("show");
+}
+
+$("shareBtn").onclick = async () => {
+  const link = `${location.origin}/?room=${state ? state.code : "MAIN"}`;
+  try { await navigator.clipboard.writeText(link); } catch { prompt("Copy this link:", link); }
+  $("shareBtn").textContent = "Copied!";
+  setTimeout(() => ($("shareBtn").textContent = "Copy invite link"), 1400);
+};
+$("joinBtn").onclick = connect;
+$("room").onkeydown = $("name").onkeydown = (e) => e.key === "Enter" && connect();
+$("startBtn").onclick = () => send({ type: "start" });
+$("againBtn").onclick = () => { $("winner").classList.remove("show"); send({ type: "start" }); };
+$("deck").onclick = () => send({ type: "draw" });
+$("unoBtn").onclick = () => send({ type: "uno" });
+$("picker").onclick = (e) => {
+  const sw = e.target.closest(".sw");
+  if (!sw) return;
+  send({ type: "play", index: pendingIndex, color: sw.dataset.c });
+  $("picker").classList.remove("show");
+};
+$("name").value = localStorage.getItem("uno.name") || "";
+$("room").value = new URLSearchParams(location.search).get("room") || "";
+</script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "uno-online",
+  "version": "1.0.0",
+  "description": "Online UNO for 2-8 players over WebSockets",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test && node test.js"
+  },
+  "engines": { "node": ">=18" },
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^8.21.3"
+  }
+}
