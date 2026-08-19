@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const { WebSocketServer } = require("ws");
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4321;   // 3000 collides with too much other tooling
 const MAX_PLAYERS = 8;
 const COLORS = ["R", "G", "B", "Y"];
 const VALUES = [...Array(10).keys()].map(String).concat(["skip", "rev", "+2"]);
